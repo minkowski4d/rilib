@@ -1,0 +1,53 @@
+\relax 
+\providecommand\zref@newlabel[2]{}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Overview}{3}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Top-Level Task: \texttt  {main\_run\_pnl\_fifo}}{3}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Purpose}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Pipeline Flow}{4}{subsection.2.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces High-level flow of \texttt  {main\_run\_pnl\_fifo}}}{4}{figure.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Incremental Date Logic}{4}{subsection.2.3}\protected@file@percent }
+\newlabel{eq:tstart}{{1}{4}{Incremental Date Logic}{equation.1}{}}
+\newlabel{eq:tend}{{2}{4}{Incremental Date Logic}{equation.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}\texttt  {initiate\_pnl\_engine} — Day-Loop Orchestrator}{5}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Function Signature}{5}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Detailed Flow}{6}{subsection.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Day-by-day loop inside \texttt  {initiate\_pnl\_engine}}}{6}{figure.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Cache Carry-Forward}{6}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Outputs}{7}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}\texttt  {pnl\_realised\_polars} — FIFO Calculation Engine}{7}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Role in the Call Stack}{7}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Input / Output}{7}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Internal Flow}{8}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Internal control flow of \texttt  {pnl\_realised\_polars}}}{8}{figure.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Data Structures}{8}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Mathematical Formulation}{9}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Sign Convention}{9}{subsubsection.4.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Sell Trade ($q_i < 0$): Long Book Realisation}{9}{subsubsection.4.5.2}\protected@file@percent }
+\newlabel{eq:rpnl_sell}{{{realised P\&L on sell}}{9}{Sell Trade ($q_i < 0$): Long Book Realisation}{AMS.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.3}Buy Trade ($q_i > 0$): Short Cover}{9}{subsubsection.4.5.3}\protected@file@percent }
+\newlabel{eq:rpnl_buy}{{{realised P\&L on short cover}}{9}{Buy Trade ($q_i > 0$): Short Cover}{AMS.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.4}Total Realised P\&L per Trade}{9}{subsubsection.4.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.5}Unrealised P\&L}{10}{subsubsection.4.5.5}\protected@file@percent }
+\newlabel{eq:upnl}{{8}{10}{Unrealised P\&L}{equation.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.6}P\&L Identity}{10}{subsubsection.4.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}FIFO Matching Examples}{10}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Standard Sell Against Long Book}{10}{subsection.5.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Sell 120 lots matched against two FIFO buy lots}}{10}{figure.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Sell Exceeds Available Longs — Short Queue Created}{10}{subsection.5.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Short queue created when sell quantity exceeds available FIFO lots}}{10}{figure.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Key Implementation Notes}{11}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Infrastructure: AWS ECR \& Airflow Orchestration}{11}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Docker Image on AWS ECR}{11}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Snowflake Credentials Injection}{11}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Airflow DAG}{12}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {7.3.1}DAG Workflow}{12}{subsubsection.7.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Airflow DAG task sequence for \texttt  {risk\_function\_mrm\_trading\_eod\_pnl}}}{12}{figure.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {7.3.2}Task Descriptions}{12}{subsubsection.7.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Full Call-Stack Summary}{13}{section.8}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Complete call stack from Airflow task to S3 output}}{13}{figure.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Source Code: \texttt  {pnl\_realised\_polars}}{13}{appendix.A}\protected@file@percent }
+\newlabel{app:code}{{A}{13}{Source Code: \texttt {pnl\_realised\_polars}}{appendix.A}{}}
+\gdef \@abspage@last{16}

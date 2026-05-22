@@ -1,0 +1,143 @@
+name: Pull Request
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/**
+      - src/**
+      - tests/**
+      - automation/**
+      - portfolio_analytics/**
+      - risk_models/**
+      - risk_analytics/**
+      - instruments/**
+      - tools/**
+      - pyproject.toml
+      - "!**/*.md"
+
+  push:
+    branches:
+      - main
+    paths:
+      - .github/**
+      - src/**
+      - tests/**
+      - automation/**
+      - portfolio_analytics/**
+      - risk_models/**
+      - instruments/**
+      - risk_analytics/**
+      - tools/**
+      - pyproject.toml
+      - "!**/*.md"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+env:
+  TR_ELEMENT: compliance-and-risk
+  TR_ATOM: risk
+  TR_GIT_REPOSITORY: risk_pylibrary
+  TR_ECR_REPOSITORY: risk/risk_pylibrary
+  PYTHON3_ECR: 263932266204.dkr.ecr.eu-central-1.amazonaws.com/base/python3
+
+jobs:
+
+  env-setup:
+    name: Setup Dynamic Environment Variables
+    runs-on: ubuntu-latest
+    outputs:
+      tr-git-repository: ${{ steps.set-output-defaults.outputs.tr-git-repository }}
+      tr-ecr-repository: ${{ steps.set-output-defaults.outputs.tr-ecr-repository }}
+      tr-element: ${{ steps.set-output-defaults.outputs.tr-element }}
+      tr-atom: ${{ steps.set-output-defaults.outputs.tr-atom }}
+      python_version: ${{ steps.set-output-defaults.outputs.python_version }}
+      uv_version: ${{ steps.set-output-defaults.outputs.uv_version }}
+      python3_ecr: ${{ steps.set-output-defaults.outputs.python3_ecr }}
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+      - name: set outputs with default values
+        id: set-output-defaults
+        run: |
+          echo "tr-git-repository=${{ env.TR_GIT_REPOSITORY }}" >> $GITHUB_OUTPUT
+          echo "tr-ecr-repository=${{ env.TR_ECR_REPOSITORY }}" >> $GITHUB_OUTPUT
+          echo "tr-element=${{ env.TR_ELEMENT }}" >> $GITHUB_OUTPUT
+          echo "tr-atom=${{ env.TR_ATOM }}" >> $GITHUB_OUTPUT
+          echo "python_version=$(cat .python-version)" >> $GITHUB_OUTPUT
+          echo "uv_version=$(cat .uv-version)" >> $GITHUB_OUTPUT
+          echo "python3_ecr=${{ env.PYTHON3_ECR }}" >> $GITHUB_OUTPUT
+
+  test-python-slow:
+    name: Python - Run unit tests and coverage
+    runs-on: ubuntu-latest-internal
+    needs:
+      - env-setup
+    steps:
+      - name: Install dependencies
+        id: install-dependencies
+        run: |
+          sudo apt install -y git-lfs
+      - uses: actions/checkout@v4
+        id: checkout
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ needs.env-setup.outputs.python_version }}
+          cache: "pip"
+          cache-dependency-path: "**/pyproject.toml"
+      - uses: actions/cache@v4
+        id: cache-uv
+        with:
+          path: |
+            ~/.cache/uv
+            $GITHUB_WORKSPACE/.venv/bin
+          key: ${{ runner.os }}-python-${{ needs.env-setup.outputs.python_version }}-uv
+      - name: Install package
+        id: install-packages
+        run: |
+          pip install uv
+          uv venv
+          uv pip install -e ".[test]"
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - name: Moto mock creds
+        id: moto-mock-creds
+        run: |
+          mkdir ~/.aws
+          touch ~/.aws/credentials
+          echo -e "[test]\naws_access_key_id = test\naws_secret_access_key = test" > ~/.aws/credentials
+     #- name: Run test & coverage
+     #   id: run-test
+     #   run: |
+     #     python3 -m coverage run
+     #     python3 -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+  ecr:
+    name: Build and publish Docker image to ECR
+    needs:
+     - test-python-slow
+     - env-setup
+    uses: ./.github/workflows/build-python.yaml
+    with:
+      ecr-repo-name: ${{ needs.env-setup.outputs.tr-ecr-repository }}
+      github-repo-name: ${{ needs.env-setup.outputs.tr-git-repository }}
+      dockerfile-name: Dockerfile
+      docker-build-args: |
+        TR_GIT_REPOSITORY=${{ github.repository }}
+        TR_GIT_COMMIT=${{ github.sha }}
+        TR_ELEMENT=${{ needs.env-setup.outputs.tr-element }}
+        TR_ATOM=${{ needs.env-setup.outputs.tr-atom }}
+        PYTHON3_ECR=${{ needs.env-setup.outputs.python3_ecr }}
+        PYTHON3_VERSION=${{ needs.env-setup.outputs.python_version }}
+        UV_VERSION=${{ needs.env-setup.outputs.uv_version }}

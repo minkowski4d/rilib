@@ -1,0 +1,543 @@
+% ============================================================
+% Margin Engine — Simplified Implementation Reference
+% Trade Republic — Margin Trading Methodology
+% Compile with: pdflatex margin_engine_simple.tex
+% ============================================================
+
+\documentclass[9pt, a4paper]{extarticle}
+
+% ── Packages ─────────────────────────────────────────────
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault]{inter}
+\usepackage{parskip}
+\usepackage{longtable}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{colortbl}
+
+% ── Hyperref ─────────────────────────────────────────────
+\hypersetup{
+    hidelinks,
+    pdftitle  = {Margin Engine — Simplified Implementation Reference},
+    pdfauthor = {},
+}
+
+% ── Section heading styles ────────────────────────────────
+\titleformat{\section}
+    {\large\bfseries}
+    {\thesection.}{0.6em}{}
+    [\titlerule]
+
+\titleformat{\subsection}
+    {\normalsize\bfseries}
+    {\thesubsection}{0.6em}{}
+
+\titleformat{\subsubsection}
+    {\normalsize\itshape}
+    {\thesubsubsection}{0.6em}{}
+
+\titlespacing{\section}{0pt}{1.6em}{0.8em}
+\titlespacing{\subsection}{0pt}{1.2em}{0.4em}
+\titlespacing{\subsubsection}{0pt}{1.0em}{0.3em}
+
+% ── Header / Footer ──────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textit{Margin Engine — Simplified Implementation Reference}}
+\fancyhead[R]{\small\textsc{Strictly Private \& Confidential} $|$ April 2026}
+\fancyfoot[C]{\small\thepage}
+
+% ── Formula block environment ─────────────────────────────
+\newenvironment{formulabox}{\par\addvspace{4pt}}{\par\addvspace{4pt}}
+
+% ── Variable table command ────────────────────────────────
+\newcommand{\vartableheader}{%
+    \textbf{Symbol} & \textbf{Description}\\
+}
+
+% ── Euro symbol ──────────────────────────────────────────
+\newcommand{\EUR}[1]{\ifmmode\text{\texteuro}#1\else\texteuro#1\fi}
+
+% ── Alert box ────────────────────────────────────────────
+\newcommand{\alertbox}[1]{%
+    \par\vspace{4pt}%
+    \noindent\colorbox{gray!12}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+        \small #1}}%
+    \vspace{4pt}\par%
+}
+
+% ── Code listings ─────────────────────────────────────────
+\lstset{
+    language=Python,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{gray!60!black},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{gray!40},
+    backgroundcolor=\color{gray!5},
+    xleftmargin=6pt,
+    xrightmargin=6pt,
+}
+
+% ── Misc ─────────────────────────────────────────────────
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+% ─────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title page ───────────────────────────────────────────
+\begin{titlepage}
+\vspace*{4cm}
+\begin{center}
+    {\Huge\bfseries Margin Engine}\\[0.5em]
+    {\Large Simplified Implementation Reference}\\[0.5em]
+    {\normalsize \texttt{margin\_engine\_simplified.py}}\\[2em]
+    {\large Trade Republic Bank GmbH}\\[0.5em]
+    {\large Risk Modelling}\\[2em]
+    {\normalsize April 2026}\\[1em]
+    {\small\textsc{Strictly Private \& Confidential}}
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\section{Overview}
+\label{sec:overview}
+% ─────────────────────────────────────────────────────────
+
+\texttt{margin\_engine\_simplified.py} implements the simplified, rule-based margin
+framework described in \texttt{margin\_methodology\_simple.tex}. It exposes a single
+class \texttt{SimplifiedMarginEngine} and two standalone functions
+\texttt{simulate\_gbm\_batch} and \texttt{\_var\_from\_mc}.
+
+The central design principle is that \textbf{the margin rate is the LTV limit}:
+
+\begin{formulabox}
+\[
+    \mathrm{LTV}_t = \frac{L_t}{\mathrm{MV}_t} \;\leq\; 1 - h_{\mathrm{phase}}(t)
+\]
+\end{formulabox}
+
+No separate Accepted Collateral Value (ACV) step is required. Three margin rates
+are maintained per instrument, each calibrated from the volatility of a distinct
+return window via GBM Monte Carlo:
+
+\begin{tabularx}{\linewidth}{llXl}
+\toprule
+\textbf{Rate} & \textbf{Return window} & \textbf{Risk captured} & \textbf{Input vol} \\
+\midrule
+$h_{\mathrm{im}}$ & Close-to-close (C$\to$C) & Overnight gap + full intraday move & \texttt{sigma\_cc} \\
+$h_{\mathrm{mm}}$ & Open-to-close (O$\to$C)  & Intraday move only (continuous monitoring) & \texttt{sigma\_oc} \\
+$h_{\mathrm{on}}$ & Close-to-open (C$\to$O)  & Overnight gap only (EOD add-on) & \texttt{sigma\_co} \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+
+The LTV limits in each phase and check type are:
+
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+\textbf{Phase} & \textbf{Check} & \textbf{LTV limit} \\
+\midrule
+IM ($t = 0$)     & Intraday  & $1 - h_{\mathrm{im}}$ \\
+IM ($t = 0$)     & Overnight & $1 - h_{\mathrm{im}} - h_{\mathrm{on}}$ \\
+MM ($t \geq 1$)  & Intraday  & $1 - h_{\mathrm{mm}}$ \\
+MM ($t \geq 1$)  & Overnight & $1 - h_{\mathrm{mm}} - h_{\mathrm{on}}$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\section{Return Decomposition and Calibration Rationale}
+\label{sec:decomp}
+% ─────────────────────────────────────────────────────────
+
+The close-to-close return decomposes additively into an overnight gap and an
+intraday component:
+
+\begin{formulabox}
+\[
+    r^{C \to C}_t \;=\; r^{C \to O}_t \;+\; r^{O \to C}_t
+\]
+\end{formulabox}
+
+At position open (\textit{IM phase}), the customer is exposed to both components
+before the first monitoring check fires. The initial margin rate $h_{\mathrm{im}}$
+must therefore cover the full C$\to$C risk horizon.
+
+Once in the \textit{MM phase} ($t \geq 1$), monitoring is continuous from market
+open. The overnight gap has already materialised and is no longer a forward risk;
+only the intraday O$\to$C component remains. The maintenance margin rate
+$h_{\mathrm{mm}}$ is therefore calibrated from O$\to$C volatility and is
+structurally lower than $h_{\mathrm{im}}$.
+
+The overnight add-on $h_{\mathrm{on}}$ is applied at EOD to close the gap between
+intraday and overnight risk and is calibrated from C$\to$O volatility.
+
+In annualised terms the approximate variance identity is:
+
+\[
+    \sigma^2_{C \to C} \;\approx\; \sigma^2_{C \to O} + \sigma^2_{O \to C}
+    \quad\Longrightarrow\quad
+    h_{\mathrm{im}} \;\gtrsim\; h_{\mathrm{mm}} + h_{\mathrm{on}}
+\]
+
+% ─────────────────────────────────────────────────────────
+\section{GBM Monte Carlo Calibration}
+\label{sec:mc}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Single-Instrument Simulation (\texttt{\_simulate\_gbm})}
+
+Each margin rate is derived from a GBM simulation of 1-day returns. For a given
+annualised drift $\mu$ and volatility $\sigma$, the 1-day log-return under
+Geometric Brownian Motion is:
+
+\begin{formulabox}
+\[
+    \ln\!\left(\frac{S_1}{S_0}\right) = \left(\mu - \tfrac{1}{2}\sigma^2\right) dt
+    + \sigma\,\sqrt{dt}\;Z, \qquad Z \sim \mathcal{N}(0,1),\quad dt = \tfrac{1}{252}
+\]
+\end{formulabox}
+
+The simple return is recovered as $r = e^{\ln(S_1/S_0)} - 1$.
+The function draws $N$ independent standard normal variates $Z_1,\dots,Z_N$,
+computes the corresponding returns, and returns them as an array.
+
+\subsection{Batch Simulation (\texttt{simulate\_gbm\_batch})}
+
+\texttt{simulate\_gbm\_batch} accepts a DataFrame indexed by \texttt{instrument\_id}
+with columns \texttt{mu}, \texttt{sigma}, \texttt{n\_sim}, and optionally
+\texttt{seed}, and runs \texttt{\_simulate\_gbm} for each row.
+
+The output is a DataFrame indexed by \texttt{instrument\_id} with one column per
+simulation path ($0 \ldots N_{\max}-1$), where $N_{\max} = \max_i n\_sim_i$.
+Instruments with fewer paths receive \texttt{NaN} padding so all rows share the
+same width.
+
+\begin{lstlisting}
+params = pd.DataFrame({
+    "mu":    [0.05, 0.08],
+    "sigma": [0.20, 0.35],
+    "n_sim": [10_000, 10_000],
+    "seed":  [42, 42],
+}, index=["AAPL", "TSLA"])
+
+sim = simulate_gbm_batch(params)
+# sim.loc["TSLA"] -> array of 10,000 simulated 1-day simple returns
+\end{lstlisting}
+
+\subsection{VaR Extraction and Rate Calibration (\texttt{\_var\_from\_mc})}
+
+The margin rate for a given return window is the worst-case 1-day loss at
+confidence level $\alpha$, floored at a minimum rate $h_{\mathrm{floor}}$:
+
+\begin{formulabox}
+\[
+    h = \max\!\bigl(h_{\mathrm{floor}},\;
+        -\mathrm{quantile}(r_{1:N},\, 1-\alpha)\bigr)
+\]
+\end{formulabox}
+
+The negation of the $(1-\alpha)$-quantile gives a positive loss magnitude.
+Used directly as the margin rate, it ensures that a position opened at the
+maximum permissible LTV will — in the worst simulated scenario at confidence
+$\alpha$ — still leave the customer's equity non-negative.
+
+The \texttt{floor\_binding} flag in the output is \texttt{True} when the floor
+raised the rate above the raw MC quantile, indicating a floor-constrained
+(rather than vol-driven) result.
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Output field} & \textbf{Description} \\
+\midrule
+\texttt{h\_\{label\}}             & Final margin rate after flooring \\
+\texttt{var\_1d\_\{label\}}       & Raw MC quantile before flooring \\
+\texttt{sigma\_1d\_\{label\}}     & Annualised $\sigma$ scaled to 1-day: $\sigma/\sqrt{252}$ \\
+\texttt{floor\_binding\_\{label\}}& \texttt{True} if floor exceeded the raw VaR \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\section{SimplifiedMarginEngine Class}
+\label{sec:engine}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Constructor}
+
+\begin{lstlisting}
+engine = SimplifiedMarginEngine(
+    confidence = 0.99,    # VaR confidence level for all three calibrations
+    n_sim      = 10_000,  # GBM paths per instrument
+    seed       = 42,      # RNG seed; None for non-deterministic
+)
+\end{lstlisting}
+
+\subsection{Method 1: \texttt{calibrate(params)} — Calibrate all three rates}
+
+Runs three independent GBM calibrations per instrument (C$\to$C, O$\to$C,
+C$\to$O) and returns a summary DataFrame.
+
+\textbf{Required input columns:}
+
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\texttt{sigma\_cc} & float & Annualised C$\to$C volatility \\
+\texttt{sigma\_oc} & float & Annualised O$\to$C volatility \\
+\texttt{sigma\_co} & float & Annualised C$\to$O volatility \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Optional input columns} (defaults in parentheses):
+
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+\textbf{Column} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{mu\_cc}      & 0.0  & Annualised drift for C$\to$C simulation \\
+\texttt{mu\_oc}      & 0.0  & Annualised drift for O$\to$C simulation \\
+\texttt{mu\_co}      & 0.0  & Annualised drift for C$\to$O simulation \\
+\texttt{h\_floor\_im} & 0.10 & Minimum IM rate \\
+\texttt{h\_floor\_mm} & 0.05 & Minimum MM rate \\
+\texttt{h\_floor\_on} & 0.02 & Minimum overnight add-on \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Output columns} (one row per instrument):
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Column} & \textbf{Description} \\
+\midrule
+\texttt{h\_im}, \texttt{h\_mm}, \texttt{h\_on}           & Calibrated margin rates \\
+\texttt{var\_1d\_im}, \texttt{var\_1d\_mm}, \texttt{var\_1d\_on} & Raw MC VaR before flooring \\
+\texttt{floor\_binding\_im/mm/on}                          & Floor constraint flags \\
+\texttt{ltv\_limit\_im}, \texttt{ltv\_limit\_mm}          & $1 - h_{\mathrm{im}}$, $1 - h_{\mathrm{mm}}$ \\
+\texttt{ltv\_limit\_im\_overnight}                         & $1 - h_{\mathrm{im}} - h_{\mathrm{on}}$ \\
+\texttt{ltv\_limit\_mm\_overnight}                         & $1 - h_{\mathrm{mm}} - h_{\mathrm{on}}$ \\
+\texttt{max\_leverage\_intraday}                           & $1 / h_{\mathrm{im}}$ \\
+\texttt{max\_leverage\_overnight}                          & $1 / (h_{\mathrm{im}} + h_{\mathrm{on}})$ \\
+\bottomrule
+\end{tabularx}
+
+\begin{lstlisting}
+params = pd.DataFrame({
+    "sigma_cc": [0.20, 0.35],
+    "sigma_oc": [0.15, 0.27],
+    "sigma_co": [0.13, 0.22],
+    "h_floor_im": [0.10, 0.20],
+}, index=["AAPL", "TSLA"])
+
+rates = engine.calibrate(params)
+# rates.loc["TSLA", "h_im"]  -> e.g. 0.2234
+\end{lstlisting}
+
+\textbf{Deriving sigma inputs from a price DataFrame:}
+
+\begin{lstlisting}
+# prices: DataFrame with columns "open" and "close", one row per date
+cc = prices["close"].pct_change()
+oc = prices["close"] / prices["open"] - 1
+co = prices["open"]  / prices["close"].shift(1) - 1
+
+params["sigma_cc"] = cc.std() * np.sqrt(252)
+params["sigma_oc"] = oc.std() * np.sqrt(252)
+params["sigma_co"] = co.std() * np.sqrt(252)
+\end{lstlisting}
+
+\subsection{Method 2: \texttt{check\_opening} — IM phase opening check}
+
+Checks whether a new position satisfies the IM condition and, optionally, the
+overnight condition at the time of opening.
+
+\begin{formulabox}
+\[
+    \mathrm{LTV}_0 = \frac{L_0}{\mathrm{MV}_0} \;\leq\; 1 - h_{\mathrm{im}}
+    \qquad\text{(intraday)}
+\]
+\[
+    \mathrm{LTV}_0 \;\leq\; 1 - h_{\mathrm{im}} - h_{\mathrm{on}}
+    \qquad\text{(overnight)}
+\]
+\end{formulabox}
+
+Key output fields:
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Field} & \textbf{Description} \\
+\midrule
+\texttt{ltv}                    & Current LTV $= L / \mathrm{MV}$ \\
+\texttt{passes\_im}             & \texttt{True} if intraday IM condition satisfied \\
+\texttt{min\_equity}            & $h_{\mathrm{im}} \times \mathrm{MV}$ \\
+\texttt{max\_loan\_intraday}    & $(1 - h_{\mathrm{im}}) \times \mathrm{MV}$ \\
+\texttt{max\_leverage\_intraday}& $1 / h_{\mathrm{im}}$ \\
+\texttt{passes\_overnight}      & \texttt{True} if overnight condition satisfied \\
+\texttt{max\_leverage\_overnight}& $1 / (h_{\mathrm{im}} + h_{\mathrm{on}})$ \\
+\texttt{topup\_required}        & Cash to post to clear the overnight condition \\
+\bottomrule
+\end{tabularx}
+
+\begin{lstlisting}
+check = engine.check_opening(
+    market_value = 15_000,
+    loan         = 10_000,
+    h_im         = rates.loc["TSLA", "h_im"],
+    h_on         = rates.loc["TSLA", "h_on"],
+)
+# check["passes_im"]       -> True / False
+# check["topup_required"]  -> cash needed to satisfy overnight condition
+\end{lstlisting}
+
+\subsection{Method 3: \texttt{monitor} — Continuous LTV check}
+
+Called at every price tick (MTM is continuous). Returns a \texttt{PositionStatus}
+dataclass with \texttt{breach} and \texttt{shortfall}.
+
+\begin{formulabox}
+\[
+    h_{\mathrm{eff}} = h_{\mathrm{phase}} + h_{\mathrm{on}} \cdot \mathbf{1}_{\mathrm{overnight}}
+\]
+\[
+    \mathrm{shortfall} = \max\!\bigl(0,\; L - (1 - h_{\mathrm{eff}}) \times \mathrm{MV}\bigr)
+\]
+\end{formulabox}
+
+The shortfall is the cash the customer must post to bring the LTV exactly to the
+applicable limit at the current market price. When \texttt{breach = True} and
+no cash is posted, auto-liquidation fires immediately.
+
+\begin{lstlisting}
+# Intraday MM check
+status = engine.monitor(
+    market_value = 13_500,
+    loan         = 10_000,
+    h_phase      = rates.loc["TSLA", "h_mm"],
+    h_on         = rates.loc["TSLA", "h_on"],
+    phase        = "mm",
+    overnight    = False,
+)
+print(status)
+# [OK]  LTV=74.1%  limit=75.0%  phase=mm  shortfall=0.00
+
+# EOD overnight check (same call, overnight=True)
+status_on = engine.monitor(
+    market_value = 13_500, loan = 10_000,
+    h_phase = rates.loc["TSLA", "h_mm"],
+    h_on    = rates.loc["TSLA", "h_on"],
+    phase   = "mm", overnight = True,
+)
+\end{lstlisting}
+
+\subsection{Method 4: \texttt{liquidation\_price} — Auto-liquidation trigger price}
+
+Returns the price $P^*$ at which LTV equals the applicable limit:
+
+\begin{formulabox}
+\[
+    P^{*} = \frac{L}{N \times (1 - h_{\mathrm{eff}})}
+\]
+\end{formulabox}
+
+\begin{lstlisting}
+p_star = engine.liquidation_price(
+    loan      = 10_000,
+    n_units   = 150,
+    h_phase   = rates.loc["TSLA", "h_mm"],
+    h_on      = rates.loc["TSLA", "h_on"],
+    overnight = False,
+)
+# e.g. 88.89 -- price below which auto-liquidation triggers in MM phase
+\end{lstlisting}
+
+\subsection{Method 5: \texttt{position\_summary} — Full one-row summary}
+
+Produces a single-row DataFrame with all LTV checks and liquidation prices for
+all four phase/overnight combinations.
+
+\begin{lstlisting}
+summary = engine.position_summary(
+    market_value = 15_000,
+    loan         = 10_000,
+    n_units      = 150,
+    rates        = rates.loc["TSLA"],
+)
+# Columns: h_im, ltv_limit_im, passes_im, liq_price_im,
+#          ltv_limit_im_overnight, passes_im_overnight, liq_price_im_overnight,
+#          h_mm, ltv_limit_mm, passes_mm, liq_price_mm,
+#          ltv_limit_mm_overnight, passes_mm_overnight, liq_price_mm_overnight,
+#          h_on, max_leverage_intraday, max_leverage_overnight
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────
+\section{Data Flow}
+\label{sec:dataflow}
+% ─────────────────────────────────────────────────────────
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{Compute volatilities} from a price DataFrame with \texttt{open}
+          and \texttt{close} columns using C$\to$C, O$\to$C and C$\to$O return series.
+    \item \textbf{Calibrate} via \texttt{engine.calibrate(params)} to obtain
+          \texttt{h\_im}, \texttt{h\_mm}, \texttt{h\_on} per instrument.
+    \item \textbf{At position open}: call \texttt{check\_opening} to verify the IM
+          and overnight conditions. Reject if \texttt{passes\_im = False}.
+    \item \textbf{Intraday (day 0)}: call \texttt{monitor} with \texttt{phase="im"}
+          and \texttt{overnight=False} at each price update.
+    \item \textbf{EOD (day 0)}: call \texttt{monitor} with \texttt{overnight=True}.
+          If \texttt{breach=True}: require customer top-up of \texttt{shortfall}.
+    \item \textbf{From day 1 onwards}: repeat steps 4–5 with \texttt{phase="mm"}.
+          The MM LTV limit is wider; the overnight check uses the same add-on.
+    \item \textbf{Auto-liquidation}: triggered immediately when \texttt{breach=True}
+          and no cash is posted. No margin call is issued.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────
+\section{Symbol Reference}
+\label{sec:symbols}
+% ─────────────────────────────────────────────────────────
+
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+\textbf{Symbol} & \textbf{Code field} & \textbf{Description} \\
+\midrule
+$L_t$                   & \texttt{loan}            & Outstanding loan at time $t$ \\
+$\mathrm{MV}_t$         & \texttt{market\_value}   & Market value $= N \times P_t$ \\
+$\mathrm{LTV}_t$        & \texttt{ltv}             & $L_t / \mathrm{MV}_t$ \\
+$h_{\mathrm{im}}$       & \texttt{h\_im}           & Initial margin rate (C$\to$C calibrated) \\
+$h_{\mathrm{mm}}$       & \texttt{h\_mm}           & Maintenance margin rate (O$\to$C calibrated) \\
+$h_{\mathrm{on}}$       & \texttt{h\_on}           & Overnight add-on (C$\to$O calibrated) \\
+$h_{\mathrm{eff}}$      & ---                      & $h_{\mathrm{phase}} + h_{\mathrm{on}} \cdot \mathbf{1}_{\mathrm{overnight}}$ \\
+$\sigma_{CC}$           & \texttt{sigma\_cc}       & Annualised C$\to$C volatility \\
+$\sigma_{OC}$           & \texttt{sigma\_oc}       & Annualised O$\to$C volatility \\
+$\sigma_{CO}$           & \texttt{sigma\_co}       & Annualised C$\to$O volatility \\
+$\alpha$                & \texttt{confidence}      & VaR confidence level (default 0.99) \\
+$N$                     & \texttt{n\_sim}          & Number of GBM simulation paths \\
+$P^{*}$                 & \texttt{liq\_price\_*}   & Auto-liquidation trigger price \\
+$dt$                    & ---                      & $1/252$ (one trading day) \\
+\bottomrule
+\end{tabularx}
+
+\end{document}

@@ -1,0 +1,124 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{Historical Simulation (HS)}\\[4pt]
+\large Portfolio VaR Engine --- Model Documentation}
+\author{Risk Modelling --- Trade Republic}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+Historical Simulation (HS) is the simplest and most transparent VaR
+methodology. It makes no assumptions about the return distribution: VaR
+is estimated directly as an empirical quantile of the observed portfolio
+return series. The method is therefore fully non-parametric and requires
+no model calibration.
+
+\textbf{Engine key:} \texttt{'hs'} \\
+\textbf{Source:} \texttt{risk\_analytics/risk\_engines.py}, lines 228--250
+
+%-----------------------------------------------------------------------
+\section{Methodology}
+
+\subsection{Portfolio Return Construction}
+
+Given a matrix of asset returns $\mathbf{R} \in \mathbb{R}^{T \times N}$
+and a weight vector $\mathbf{w} \in \mathbb{R}^N$, the portfolio return
+series is:
+\begin{equation}
+r_t^{pf} = \sum_{i=1}^{N} w_i \, r_{i,t}, \qquad t = 1, \ldots, T
+\end{equation}
+Only the most recent $T$ observations are used (controlled by the
+\texttt{window} parameter, default $T = 250$).
+
+\subsection{Value-at-Risk}
+
+The 1-day VaR at tail probability $\alpha$ is the negative of the
+$\alpha$-quantile of the empirical distribution:
+\begin{equation}
+\widehat{\text{VaR}}_\alpha = -Q_\alpha\!\left(\{r_t^{pf}\}_{t=1}^T\right)
+\end{equation}
+where $Q_\alpha(\cdot)$ denotes the empirical $\alpha$-th quantile.
+A positive value indicates a loss. Default quantiles:
+$\alpha \in \{0.05, 0.01, 0.001\}$.
+
+\subsection{Conditional Value-at-Risk (Expected Shortfall)}
+
+CVaR is the expected loss conditional on the loss exceeding the VaR
+threshold:
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha
+= -\frac{1}{|\mathcal{T}_\alpha|} \sum_{t \in \mathcal{T}_\alpha} r_t^{pf}
+\end{equation}
+where $\mathcal{T}_\alpha = \{t : r_t^{pf} \leq Q_\alpha\}$
+is the set of dates where the portfolio return falls at or below the
+VaR quantile.
+
+\subsection{Holding-Period Scaling}
+
+Multi-day estimates are obtained via the square-root-of-time rule:
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{(H)} = \widehat{\text{VaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\qquad
+\widehat{\text{CVaR}}_\alpha^{(H)} = \widehat{\text{CVaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{window} & int & 250 & Lookback window (number of trading days) \\
+\texttt{qtls}   & list & [0.05, 0.01, 0.001] & Tail probability levels \\
+\texttt{holding\_period} & int & 1 & Forecast horizon in days \\
+\texttt{decay}  & float & 0.94 & Defined but not used in HS (reserved) \\
+\texttt{verbose} & bool & True & Print model setup information \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\textbf{Note:} The \texttt{decay} parameter is accepted for interface
+consistency but has no effect in the Historical Simulation engine.
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{6cm} p{8cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+No distributional assumptions & Does not capture volatility clustering \\
+Simple and transparent & VaR at 99.9\% requires $>1000$ observations \\
+Captures fat tails empirically & Backward-looking; slow to adapt to new regimes \\
+No calibration required & Square-root scaling assumes i.i.d.\ returns \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_analytics import risk_engines as re
+
+var_hs = re.portfolio_vaR(
+    rets_orig = rets,
+    wgts      = weights,
+    engine    = 'hs',
+    fmt_engine = {
+        'window'         : 500,
+        'qtls'           : [0.05, 0.01, 0.001],
+        'holding_period' : 1,
+    }
+)
+\end{lstlisting}
+
+\end{document}

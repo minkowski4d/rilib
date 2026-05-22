@@ -1,0 +1,242 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{Multivariate Monte Carlo Simulation}\\[4pt]
+\large Portfolio VaR Engine --- Model Documentation}
+\author{Risk Modelling --- Trade Republic}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+The Monte Carlo (MC) engine generates a large number of independent
+synthetic return paths for all assets in the portfolio simultaneously,
+using a multivariate distribution calibrated to historical data.
+VaR and CVaR are then estimated empirically from the simulated portfolio
+P\&L distribution. This is the only engine that natively captures
+cross-asset dependence via a full covariance matrix.
+
+\textbf{Engine key:} \texttt{'mc'} \\
+\textbf{Sources:}
+\begin{itemize}
+  \item \texttt{risk\_models/mc\_models.py}, lines 16--96 (\texttt{mc\_simulate})
+  \item \texttt{risk\_analytics/risk\_engines.py}, lines 154--186 (VaR/CVaR aggregation)
+  \item \texttt{risk\_models/support\_models.py}, lines 49--61 (\texttt{ewma\_covariance})
+\end{itemize}
+
+%-----------------------------------------------------------------------
+\section{Covariance Matrix Estimation}
+
+Three options are available for the input covariance matrix
+$\hat{\Sigma} \in \mathbb{R}^{N \times N}$ (where $N$ is the number of assets):
+
+\subsection{EWMA Covariance (default: \texttt{ewma\_cov=True})}
+
+Following RiskMetrics, the EWMA covariance matrix over a window of $T$
+observations is:
+\begin{equation}
+\hat{\Sigma}_{\text{EWMA}}
+= \frac{\sum_{k=0}^{T-1} \lambda^k \, (\mathbf{r}_{T-k} - \bar{\mathbf{r}})
+                                      (\mathbf{r}_{T-k} - \bar{\mathbf{r}})^\top}
+       {\sum_{k=0}^{T-1} \lambda^k}
+\label{eq:ewma_cov}
+\end{equation}
+where $\bar{\mathbf{r}}$ is the sample mean vector and $\lambda = 0.94$
+is the decay factor. More recent observations receive exponentially higher
+weight.
+
+\subsection{Sample (Historical) Covariance (\texttt{ewma\_cov=False})}
+
+\begin{equation}
+\hat{\Sigma}_{\text{hist}} = \frac{1}{T-1}
+  \sum_{t=1}^{T} (\mathbf{r}_t - \bar{\mathbf{r}})(\mathbf{r}_t - \bar{\mathbf{r}})^\top
+\end{equation}
+
+\subsection{Maximum Likelihood Estimator (\texttt{mlest\_cov=True})}
+
+Uses \texttt{sklearn.covariance.EmpiricalCovariance} on 500 Monte Carlo
+samples drawn from a multivariate Normal with the historical covariance.
+This option is available for stress scenarios where \texttt{stress\_means}
+are specified.
+
+%-----------------------------------------------------------------------
+\section{Simulation Procedure}
+
+\subsection{Drawing Simulated Paths}
+
+For each of $n$ simulation runs $i = 1, \ldots, n$, draw a matrix of
+$T_{\text{sim}}$ multivariate daily returns:
+
+\textbf{Multivariate Normal:}
+\begin{equation}
+\mathbf{r}^{(i)} \overset{i.i.d.}{\sim}
+\mathcal{N}_N\!\left(\boldsymbol{\mu},\, \hat{\Sigma}\right),
+\quad \mathbf{r}^{(i)} \in \mathbb{R}^{T_{\text{sim}} \times N}
+\end{equation}
+
+\textbf{Multivariate Student-$t$:}
+\begin{equation}
+\mathbf{r}^{(i)} \overset{i.i.d.}{\sim}
+t_N\!\left(\boldsymbol{\mu},\, \hat{\Sigma},\, \nu\right),
+\quad \mathbf{r}^{(i)} \in \mathbb{R}^{T_{\text{sim}} \times N}
+\end{equation}
+where $\boldsymbol{\mu}$ is the historical mean vector and $\nu$ is the
+degrees-of-freedom parameter (default $\nu = 5$).
+
+The Student-$t$ option produces heavier-tailed joint distributions and
+is therefore more conservative for tail risk estimation.
+
+\subsection{Portfolio Return Paths}
+
+For each simulation $i$, the portfolio return path is:
+\begin{equation}
+r_{pf,t}^{(i)} = \mathbf{w}^\top \mathbf{r}_t^{(i)}, \quad t = 1,\ldots, T_{\text{sim}}
+\end{equation}
+giving a simulated P\&L vector $\mathbf{r}_{pf}^{(i)} \in \mathbb{R}^{T_{\text{sim}}}$
+for each simulation run.
+
+%-----------------------------------------------------------------------
+\section{VaR and CVaR Estimation}
+
+\subsection{Value-at-Risk}
+
+For each simulation run $i$, compute the empirical $\alpha$-quantile of
+the portfolio return path:
+\begin{equation}
+\text{VaR}_\alpha^{(i)} = -Q_\alpha\!\left(\mathbf{r}_{pf}^{(i)}\right)
+\end{equation}
+The reported VaR is the \textbf{median} across all $n$ simulation runs:
+\begin{equation}
+\widehat{\text{VaR}}_\alpha
+= \operatorname{median}_{i=1,\ldots,n}\!\left\{\text{VaR}_\alpha^{(i)}\right\}
+\label{eq:mc_var}
+\end{equation}
+Using the median (rather than the mean) provides robustness against
+extreme outlier simulations.
+
+\subsection{Conditional Value-at-Risk (Expected Shortfall)}
+
+For each simulation run $i$, CVaR is the mean of returns that fall at or
+below the $\alpha$-quantile:
+\begin{equation}
+\text{CVaR}_\alpha^{(i)}
+= -\frac{1}{|\mathcal{S}_\alpha^{(i)}|}
+  \sum_{t \in \mathcal{S}_\alpha^{(i)}} r_{pf,t}^{(i)},
+\qquad
+\mathcal{S}_\alpha^{(i)} = \left\{t : r_{pf,t}^{(i)} \leq Q_\alpha\!\left(\mathbf{r}_{pf}^{(i)}\right)\right\}
+\end{equation}
+The reported CVaR is again the median across simulations:
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha
+= \operatorname{median}_{i=1,\ldots,n}\!\left\{\text{CVaR}_\alpha^{(i)}\right\}
+\label{eq:mc_cvar}
+\end{equation}
+
+\subsection{Holding-Period Scaling}
+
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{(H)} = \widehat{\text{VaR}}_\alpha^{(1)} \cdot \sqrt{H},
+\qquad
+\widehat{\text{CVaR}}_\alpha^{(H)} = \widehat{\text{CVaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Stress Testing Extension}
+
+The \texttt{stress\_means} parameter allows replacing the historical mean
+vector $\boldsymbol{\mu}$ with a user-specified stress scenario mean vector
+$\boldsymbol{\mu}^{\text{stress}}$, while keeping the covariance structure
+unchanged:
+\begin{equation}
+\mathbf{r}^{(i)} \sim \mathcal{N}_N\!\left(\boldsymbol{\mu}^{\text{stress}},\, \hat{\Sigma}\right)
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{window}  & int   & 250   & Lookback window for covariance estimation \\
+\texttt{n\_sim}  & int   & 1000  & Number of Monte Carlo simulation runs \\
+\texttt{distr}   & str   & \texttt{'norm'} & Distribution: \texttt{'norm'} or \texttt{'t'} \\
+\texttt{decay}   & float & 0.94  & EWMA decay $\lambda$ for covariance matrix \\
+\texttt{ewma\_cov} & bool & True & Use EWMA covariance (else: sample covariance) \\
+\texttt{qtls}    & list  & [0.05, 0.01, 0.001] & Tail probability levels \\
+\texttt{holding\_period} & int & 1 & Forecast horizon in days \\
+\texttt{verbose} & bool  & True  & Print progress information \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\noindent Additional parameters passed directly to \texttt{mc\_simulate()}:
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{deg\_f}      & int   & 5    & Student-$t$ degrees of freedom \\
+\texttt{mlest\_cov}  & bool  & False& Use ML covariance estimator \\
+\texttt{stress\_means} & list & []  & Stress scenario mean vector \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{6cm} p{8cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+Captures cross-asset dependencies & Computationally intensive ($n \times T_{\text{sim}}$ draws) \\
+No parametric tail assumption required & Does not capture volatility clustering \\
+Flexible: Normal or Student-$t$ & Covariance matrix may be poorly conditioned \\
+Stress scenario support & Convergence requires large $n$ for extreme quantiles \\
+Transparent and intuitive & Square-root scaling is approximate \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Convergence Guidance}
+
+For stable 99.9\% VaR estimates ($\alpha = 0.001$), at least $n = 5{,}000$
+simulations are recommended. With the default $n = 1{,}000$, the 99.9\%
+estimate has a coefficient of variation of approximately 10\%.
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_analytics import risk_engines as re
+
+var_mc = re.portfolio_vaR(
+    rets_orig  = rets,
+    wgts       = weights,
+    engine     = 'mc',
+    fmt_engine = {
+        'window'         : 250,
+        'n_sim'          : 5000,
+        'distr'          : 'norm',
+        'decay'          : 0.94,
+        'ewma_cov'       : True,
+        'qtls'           : [0.05, 0.01, 0.001],
+        'holding_period' : 1,
+        'verbose'        : True,
+    }
+)
+\end{lstlisting}
+
+%-----------------------------------------------------------------------
+\section{References}
+
+J.P.\ Morgan/Reuters (1996). \textit{RiskMetrics Technical Document}, 4th ed.\\
+Jorion, P. (2006). \textit{Value at Risk}, 3rd ed. McGraw-Hill.
+
+\end{document}

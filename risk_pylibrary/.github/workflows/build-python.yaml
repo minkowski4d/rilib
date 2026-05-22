@@ -1,0 +1,108 @@
+name: ECR build and push
+
+on:
+  workflow_call:
+    inputs:
+      ecr-repo-name:
+        description: "ECR repository name where push images to"
+        required: true
+        type: string
+      github-repo-name:
+        description: "Github repository name"
+        required: true
+        type: string
+      aws-account-id:
+        description: "AWS account ID where ECR repository locate, default is data-production environment"
+        default: "263932266204"
+        required: false
+        type: string
+      aws-region:
+        description: "AWS region"
+        default: "eu-central-1"
+        required: false
+        type: string
+      dockerfile-name:
+        description: "Dockerfile name"
+        required: false
+        default: "Dockerfile"
+        type: string
+      dockerfile-directory:
+        description: "Folder where Dockerfile locates"
+        required: false
+        default: "."
+        type: string
+      docker-build-args:
+        description: "List of build-time variables"
+        required: false
+        type: string
+      docker-main-target:
+        description: "For multistage build, the target to use"
+        type: string
+        required: false
+        default: "main"
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ inputs.ecr-repo-name }}
+          tags: |
+            type=sha
+            type=ref,event=pr
+            type=ref,event=branch,enable=${{ github.ref_name == 'main' }}
+            type=ref,event=tag
+          flavor: |
+            latest=false
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS Profile
+        id: configure-aws
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/github-actions/${{ inputs.github-repo-name }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: ECR Login
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+          registries: ${{ inputs.aws-account-id }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        id: docker-build
+        with:
+          context: ${{ inputs.dockerfile-directory }}
+          file: ${{ inputs.dockerfile-directory }}/${{ inputs.dockerfile-name }}
+          build-args: ${{ inputs.docker-build-args }}
+          target: ${{ inputs.docker-main-target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Image digest
+        run: |
+          echo "Image: " >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ inputs.ecr-repo-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image digest: " >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ steps.docker-build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image tags:" >> $GITHUB_STEP_SUMMARY
+          echo '${{ steps.meta.outputs.json }}' | jq '.tags | to_entries[] | "- `\(.value)`"' -r >> $GITHUB_STEP_SUMMARY

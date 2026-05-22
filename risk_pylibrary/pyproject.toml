@@ -1,0 +1,112 @@
+[build-system]
+requires = [
+  "setuptools>=65.4",
+  "setuptools-scm>=8.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "risk-function-pylibrary"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+urls = {"Homepage" = "https://github.com/tradrepublic/risk_pylibrary"}
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "boto3==1.38.36",
+  "smart-open==7.1.0",
+  "snowflake-connector-python==3.15.0",
+  "snowflake-sqlalchemy==1.6.1",
+  "sqlalchemy==1.4.54",
+  "polars==1.30.0",
+  "scikit-learn==1.7.0",
+  "pandas==2.3.0",
+  "scipy==1.15.3",
+  "statsmodels==0.14.4",
+  "pyarrow==20.0.0",
+  "jax==0.6.1",
+  "jinja2==3.1.6",
+  "yfinance==0.2.61",
+  "load-dotenv==0.1.0",
+  "ipython==9.0.1",
+  "arch==7.2.0",
+]
+
+[tool.setuptools_scm]
+#version_file = "src/__version__.py"
+
+[project.optional-dependencies]
+test = [
+  "coverage[toml]==7.9.1",
+  "pytest==8.4.0",
+]
+dev = [
+  "black==25.1.0",
+  "coverage[toml]==7.9.1",
+  "jupyter==1.1.1",
+  "notebook==7.4.3",
+  "pre-commit==4.2.0",
+  "pytest==8.4.0",
+  "ruff==0.11.13",
+]
+
+[project.scripts]
+#crassus_hello = "crassus.hello:print_hello"
+
+[tool.setuptools.packages.find]
+#where = ["src"]
+#include = ["crassus*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.sql"]
+
+[tool.pytest.ini_options]
+minversion = "6.2.5"
+addopts = "-ra -vv"
+testpaths = [
+  "tests"
+]
+
+[tool.coverage.run]
+branch = true
+command_line = "-m pytest"
+
+[tool.coverage.paths]
+source = [
+  "src/"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = false
+skip_covered = true
+skip_empty = true
+sort = "-cover"
+
+[tool.coverage.html]
+directory = "coverage/html"
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]

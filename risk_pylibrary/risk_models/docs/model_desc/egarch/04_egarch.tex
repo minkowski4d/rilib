@@ -1,0 +1,205 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{EGARCH(1,1,1) Model}\\[4pt]
+\large Portfolio VaR Engine --- Model Documentation}
+\author{Risk Modelling --- Trade Republic}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+The Exponential GARCH model (EGARCH; Nelson, 1991) models the
+\textit{logarithm} of the conditional variance, rather than the level.
+This has two key advantages over GJR-GARCH: (1) positivity of $\sigma_t^2$
+is guaranteed without parameter constraints, and (2) both the magnitude
+and the sign of past shocks affect future volatility, naturally capturing
+the leverage effect.
+
+\textbf{Engine key:} \texttt{'egarch'} \\
+\textbf{Sources:}
+\begin{itemize}
+  \item \texttt{risk\_models/garch\_models.py}, lines 16--35 (\texttt{garch\_exp})
+  \item \texttt{risk\_models/garch\_models.py}, lines 58--131 (\texttt{calculate\_vaR\_garch})
+  \item \texttt{risk\_analytics/risk\_engines.py}, lines 135--152 (engine dispatch)
+\end{itemize}
+\textbf{Library:} \texttt{arch} (Kevin Sheppard)
+
+%-----------------------------------------------------------------------
+\section{Volatility Model}
+
+\subsection{EGARCH(1,1,1) Specification}
+
+Let $r_t$ denote the portfolio return at time $t$. The model assumes:
+\begin{equation}
+r_t = \mu + \varepsilon_t, \qquad
+\varepsilon_t = \sigma_t z_t, \qquad
+z_t \overset{i.i.d.}{\sim} D(0,1)
+\end{equation}
+The log-variance dynamics are:
+\begin{equation}
+\log \sigma_t^2
+= \omega
++ \alpha \left(\frac{|\varepsilon_{t-1}|}{\sigma_{t-1}}
+              - \mathbb{E}\!\left[\frac{|\varepsilon_{t-1}|}{\sigma_{t-1}}\right]\right)
++ \gamma \frac{\varepsilon_{t-1}}{\sigma_{t-1}}
++ \beta \log \sigma_{t-1}^2
+\label{eq:egarch}
+\end{equation}
+
+\begin{itemize}
+  \item $\omega$: intercept of the log-variance equation
+  \item $\alpha \geq 0$: magnitude effect (symmetric response to shock size)
+  \item $\gamma$: sign (asymmetry/leverage) effect;
+        $\gamma < 0$ implies negative shocks increase volatility more than
+        positive shocks
+  \item $\beta$: persistence in log-variance; $|\beta| < 1$ ensures stationarity
+  \item $\mathbb{E}[|z_{t-1}|]$ is a normalisation constant that depends on $D$
+\end{itemize}
+
+Because the variance is modelled in logarithms, \textit{no non-negativity
+constraints} are needed on $\omega$, $\alpha$, $\gamma$, or $\beta$.
+
+\subsection{Comparison with GJR-GARCH}
+
+\begin{tabular}{lll}
+\toprule
+Feature & GJR-GARCH & EGARCH \\
+\midrule
+Variance modelled & Level $\sigma_t^2$ & Log $\log\sigma_t^2$ \\
+Parameter constraints & Yes ($\omega, \alpha, \beta \geq 0$) & None \\
+Leverage effect & Indicator $\mathbb{1}_{\varepsilon<0}$ & Sign term $\gamma z_{t-1}$ \\
+Stationarity condition & $\alpha + \frac{1}{2}\gamma + \beta < 1$ & $|\beta| < 1$ \\
+\bottomrule
+\end{tabular}
+
+\subsection{ARCH library call}
+
+\begin{lstlisting}[language=Python]
+arch_model(rets_rescaled, p=1, q=1, o=1, vol='EGARCH', dist=dist)
+\end{lstlisting}
+Parameters \texttt{p=1}, \texttt{q=1} set the ARCH and GARCH lag orders;
+\texttt{o=1} activates the asymmetric (leverage) term.
+
+%-----------------------------------------------------------------------
+\section{VaR and CVaR Calculation}
+
+The VaR and CVaR computation is \textbf{identical} to the GJR-GARCH engine,
+both calling \texttt{calculate\_vaR\_garch()} with \texttt{garch\_engine='egarch'}.
+For completeness, the formulas are reproduced below.
+
+\subsection{One-Step Forecast}
+
+\begin{equation}
+\hat{\mu}_{t+1} = \hat{\mu}, \qquad \hat{\sigma}_{t+1}^2 = \text{forecast variance}
+\end{equation}
+
+\subsection{Parametric VaR (without FHS)}
+
+\textbf{Value-at-Risk:}
+\begin{equation}
+\widehat{\text{VaR}}_\alpha
+= -\hat{\mu}_{t+1} + \hat{\sigma}_{t+1} \cdot q_\alpha^D
+\end{equation}
+
+\textbf{CVaR --- Normal:}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{\text{N}}
+= -\hat{\mu}_{t+1} + \hat{\sigma}_{t+1} \cdot
+  \frac{\phi\!\left(\Phi^{-1}(\alpha)\right)}{\alpha}
+\end{equation}
+
+\textbf{CVaR --- Student-$t$:}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{t}
+= -\hat{\mu}_{t+1}
+  - \frac{\hat{\sigma}_{t+1}}{\alpha(1 - \hat{\nu})}
+    \Bigl(\hat{\nu} - 2 + \bigl[t^{-1}(\alpha;\hat{\nu})\bigr]^2\Bigr)
+    \cdot f_t\!\bigl(t^{-1}(\alpha;\hat{\nu});\hat{\nu}\bigr)
+\end{equation}
+
+\subsection{Filtered Historical Simulation (FHS)}
+
+When \texttt{fhs=True}, standardised residuals
+$\hat{z}_t = (r_t - \hat{\mu})/\hat{\sigma}_t$ replace the parametric
+distribution quantile:
+\begin{equation}
+q_\alpha^{\text{FHS}} = Q_{1-\alpha}\!\left(\{\hat{z}_t\}\right)
+\end{equation}
+
+\subsection{Holding-Period Scaling}
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{(H)} = \widehat{\text{VaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{window}   & int   & 250   & Lookback window \\
+\texttt{rescale}  & float & 1000  & Rescaling factor for numerical stability \\
+\texttt{decay}    & float & 1     & EWMA pre-weighting decay ($\lambda=1$: no decay) \\
+\texttt{ftol}     & float & 1e-6  & Optimizer convergence tolerance \\
+\texttt{max\_iter}& int   & 150   & Maximum optimizer iterations \\
+\texttt{fhs}      & bool  & False & Use Filtered Historical Simulation \\
+\texttt{distr}    & str   & \texttt{'Normal'} & Innovation distribution \\
+\texttt{qtls}     & list  & [0.05, 0.01, 0.001] & Tail probability levels \\
+\texttt{holding\_period} & int & 1 & Forecast horizon in days \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{6cm} p{8cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+No non-negativity constraints on parameters & More complex likelihood than GJR \\
+Natural leverage effect via sign term & Harder to interpret parameters \\
+Log-variance avoids negative variance & Sensitive to initialisation \\
+Well-suited to equity return series & Square-root scaling is approximate \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_analytics import risk_engines as re
+
+var_egarch = re.portfolio_vaR(
+    rets_orig  = rets,
+    wgts       = weights,
+    engine     = 'egarch',
+    fmt_engine = {
+        'window'         : 250,
+        'rescale'        : 1000,
+        'decay'          : 1,
+        'ftol'           : 1e-6,
+        'max_iter'       : 150,
+        'fhs'            : False,
+        'distr'          : 't',
+        'qtls'           : [0.05, 0.01, 0.001],
+        'holding_period' : 1,
+    }
+)
+\end{lstlisting}
+
+%-----------------------------------------------------------------------
+\section{References}
+
+Nelson, D.B. (1991).
+\textit{Conditional Heteroskedasticity in Asset Returns: A New Approach.}
+Econometrica, 59(2), 347--370.
+
+\end{document}

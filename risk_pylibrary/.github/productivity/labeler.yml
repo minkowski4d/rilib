@@ -1,0 +1,10 @@
+gh-config:
+  - .github/**/*
+
+codeowners:
+  - .github/CODEOWNERS
+  - CODEOWNERS
+
+documentation:
+  - "*.md"
+  - docs/**/*

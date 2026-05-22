@@ -1,0 +1,355 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\title{
+    \textbf{Credit Spread Risk in the Banking Book (CSRBB)} \\[0.5em]
+    \large Framework Summary: Swedish Bond vs German Bund (EUR)
+}
+\author{Trade Republic — Risk Modelling}
+\date{February 2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────
+\section{Rationale of the Approach}
+% ─────────────────────────────────────────────
+
+\subsection{Regulatory Context}
+
+The European Banking Authority (EBA) updated its guidelines on Interest Rate Risk and Credit Spread Risk in the Banking Book via \textbf{EBA/GL/2022/14}, effective 31 December 2023. The framework elevates CSRBB to a \textit{standalone} risk category, distinct from IRRBB, and mandates:
+
+\begin{itemize}[noitemsep]
+    \item Assessment of CSRBB across all credit-spread-sensitive instruments (assets, liabilities, off-balance-sheet);
+    \item Inclusion of all fair-valued assets at a minimum;
+    \item Measurement in terms of both \textbf{EVE} (Economic Value of Equity) and \textbf{NII} (Net Interest Income);
+    \item Justified exclusion of any instrument from scope.
+\end{itemize}
+
+In Sweden, Finansinspektionen (FI) additionally recommends a VaR-based internal model using a \textbf{90-day holding period} and a \textbf{99\% confidence level}.
+
+\subsection{Instrument Pair: Swedish Bond vs German Bund}
+
+The credit spread is defined as the yield differential between a risky instrument and a risk-free benchmark of the same maturity:
+
+\[
+    CS(t, m) = R_{\text{risky}}(t, m) - R_{\text{rf}}(t, m)
+\]
+
+In the EUR context adopted here:
+
+\begin{center}
+\begin{tabular}{ll}
+    \toprule
+    \textbf{Component} & \textbf{Instrument} \\
+    \midrule
+    Risk-free benchmark & German Bund (Bundesanleihe) \\
+    Risky instrument    & Swedish EUR-denominated bond (covered / bank / sovereign) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The spread embeds two components per EBA (2022):
+\begin{enumerate}[noitemsep]
+    \item \textbf{Market credit spread}: compensation for counterparty default risk at a given credit quality;
+    \item \textbf{Market liquidity spread}: compensation for the lower liquidity of the Swedish instrument relative to the Bund.
+\end{enumerate}
+
+\subsection{Choice of Risk-Free Curve}
+
+The ECB publishes AAA-rated EUR sovereign yield curves daily, which serve as the Bund-equivalent risk-free reference. This avoids the issue encountered when using OIS curves for portfolios with significant floating-rate exposure: the credit spread would collapse to zero at short maturities if Stibor/EURIBOR were used both as the benchmark and the underlying floating rate.
+
+% ─────────────────────────────────────────────
+\section{Mathematical Theory}
+% ─────────────────────────────────────────────
+
+\subsection{Zero Coupon Bond and Spot Rate}
+
+A Zero Coupon Bond (ZCB) with maturity $T$ is priced at time $t$ as:
+
+\[
+    p(t, T) = e^{-r(t,T)(T-t)}
+\]
+
+where $r(t, T)$ is the continuously compounded spot rate.
+
+\subsection{Forward Rate}
+
+The forward rate $F(t; S, T)$ agreed at time $t$ for the period $[S, T]$ is:
+
+\[
+    F(t; S, T) = -\frac{\ln p(t, T) - \ln p(t, S)}{T - S}
+\]
+
+For adjacent time bucket midpoints $T_k$ and $T_{k+1}$, the effective forward rate at time $t=0$ is:
+
+\[
+    F_0(0;\, T_k, T_{k+1}) = \frac{r(0, T_{k+1})\,T_{k+1} - r(0, T_k)\,T_k}{T_{k+1} - T_k}
+\]
+
+\subsection{Nelson-Siegel-Svensson (NSS) Yield Curve}
+
+Since market data is discrete and often incomplete for longer maturities, the NSS model fits a smooth yield curve. The instantaneous forward rate is:
+
+\[
+    r(t, T) = \beta_0 + \beta_1 e^{-T/\tau_1}
+    + \beta_2 \left(\frac{T}{\tau_1}\right) e^{-T/\tau_1}
+    + \beta_3 \left(\frac{T}{\tau_2}\right) e^{-T/\tau_2}
+\]
+
+The zero yield curve is:
+
+\[
+    R(t, T) = \beta_0
+    + \beta_1 \left(\frac{1 - e^{-T/\tau_1}}{T/\tau_1}\right)
+    + \beta_2 \left(\frac{1 - e^{-T/\tau_1}}{T/\tau_1} - e^{-T/\tau_1}\right)
+    + \beta_3 \left(\frac{1 - e^{-T/\tau_2}}{T/\tau_2} - e^{-T/\tau_2}\right)
+\]
+
+Parameters $\{\beta_0, \beta_1, \beta_2, \beta_3, \tau_1, \tau_2\}$ are calibrated daily via non-linear least squares:
+
+\[
+    \min_{\lambda,\,\beta} \sum_T \left[\hat{r}(t, T) - r^M(t, T)\right]^2 \quad \forall\, t
+\]
+
+where $\hat{r}(t, T)$ is the model estimate and $r^M(t, T)$ is the observed market rate.
+
+\subsection{Credit Spread}
+
+After constructing the daily NSS yield curves for both the risky and risk-free instruments, the historical credit spread for each day $t$ and maturity $m$ is:
+
+\[
+    CS(t, m) = R_{\text{risky}}(t, m) - R_{\text{rf}}(t, m)
+\]
+
+\subsection{Value at Risk}
+
+For a portfolio with future value $X$ at time 1 and discounted loss $L = -X/R_0$, the VaR at confidence level $1-p$ is the $(1-p)$-quantile of $L$:
+
+\[
+    \mathrm{VaR}_p(X) = F_L^{-1}(1-p)
+\]
+
+The Historical Simulation VaR sorts all historical 90-day changes in descending order and takes the 99th percentile as the capital requirement.
+
+\subsection{Expected Shortfall}
+
+Expected Shortfall (ES) is a coherent risk measure that averages losses beyond the VaR cutoff:
+
+\[
+    \mathrm{ES}_p(X) = \frac{1}{p} \int_0^p \mathrm{VaR}_u(X)\, du
+    = \mathbb{E}\!\left[L \mid L \geq \mathrm{VaR}_p(X)\right]
+\]
+
+ES satisfies subadditivity (portfolio diversification reduces risk), which VaR does not.
+
+\subsection{Economic Value of Equity (EVE)}
+
+The discount factor for currency $c$, time bucket $i$ with maturity $m_i$, at time $t$ is:
+
+\[
+    DF_{i,c,t} = e^{-R_{i,c}(t,\, m_i)\cdot(m_i - t_0)}
+\]
+
+The EVE under the stressed scenario (risky yield as discount rate) is:
+
+\[
+    EVE_{\text{stressed},\, c,\, t} = \sum_{i=1}^{19} CF_{i,c} \cdot DF_{i,c,t}
+\]
+
+The change in EVE due to credit spread risk is:
+
+\[
+    \Delta EVE_{c,t} = EVE_{\text{stressed},\, c,\, t} - EVE_{\text{base},\, c,\, t}
+\]
+
+where the base uses the German Bund yield curve as the discount rate. Aggregating across currencies (converted to a common base):
+
+\[
+    \Delta EVE_t = \sum_{c} \Delta EVE_{c,t}
+\]
+
+The 90-day rolling CSRBB capital requirement:
+
+\[
+    \mathrm{VaR}_{0.99}\!\left(\Delta EVE^{90}\right)
+    = \min\left\{m : P\!\left(\Delta EVE^{90} \leq m\right) \leq 0.01\right\}
+\]
+
+\subsection{Net Interest Income (NII)}
+
+The change in NII for currency $c$ at time $t$, driven by credit spread movements between time bucket midpoints $T_k$ and $T_{k+1}$, is:
+
+\[
+    \Delta NII_{c,t} = \sum_{i=1}^{19} CF_{i,c} \cdot
+    \frac{CS_t(0;\, T_{k+1})\,T_{k+1} - CS_t(0;\, T_k)\,T_k}{T_{k+1} - T_k}
+\]
+
+Aggregating across currencies:
+
+\[
+    \Delta NII_t = \sum_{c} \Delta NII_{c,t}
+\]
+
+The 90-day rolling NII capital requirement:
+
+\[
+    \mathrm{VaR}_{0.99}\!\left(\Delta NII^{90}\right)
+    = \min\left\{m : P\!\left(\Delta NII^{90} \leq m\right) \leq 0.01\right\}
+\]
+
+\subsection{Capital Requirement}
+
+EVE and NII respond to credit spread movements in opposite directions: EVE is sensitive to \textit{widening} spreads; NII (for an asset-heavy book) is sensitive to \textit{tightening} spreads. The capital requirement is therefore:
+
+\[
+    K_{\mathrm{CSRBB}} = \max\!\left(\mathrm{VaR}_{0.99}(\Delta EVE^{90}),\;
+    \mathrm{VaR}_{0.99}(\Delta NII^{90})\right)
+\]
+
+% ─────────────────────────────────────────────
+\section{Implementation Guidelines}
+% ─────────────────────────────────────────────
+
+\subsection{Step-by-Step Procedure}
+
+\begin{enumerate}
+    \item \textbf{Scope identification}: identify all credit-spread-sensitive instruments on the banking book (assets, liabilities, off-balance-sheet). For EUR-denominated Swedish bonds, include fixed-coupon, zero-coupon, and floating-rate instruments linked to EURIBOR.
+
+    \item \textbf{Cash flow bucketing}: slot all net notional repricing cash flows $CF_{i,c}$ into the 19 BCBS time buckets. Floating-rate instruments are treated as fixed until the next repricing date.
+
+    \item \textbf{Data sourcing}: retrieve at least \textbf{10 years} of daily yield data to ensure coverage of multiple stress periods (e.g., Eurozone debt crisis 2012, COVID-19 2020, Ukraine shock 2022). Use ECB AAA sovereign yield curves for the German Bund risk-free curve.
+
+    \item \textbf{Yield curve fitting}: apply the NSS model daily to both the Swedish bond and German Bund yield data. Validate the resulting curves visually to ensure stability up to 25-year maturities.
+
+    \item \textbf{Credit spread time series}: compute daily $CS(t, m)$ for each time bucket maturity $m$.
+
+    \item \textbf{EVE and NII calculation}: compute $\Delta EVE_{c,t}$ and $\Delta NII_{c,t}$ for each currency and day. Convert to a common currency and aggregate.
+
+    \item \textbf{90-day rolling differences}: compute $\Delta EVE^{90}$ and $\Delta NII^{90}$ as rolling 90-day differences over the full historical series.
+
+    \item \textbf{Risk metrics}: sort $\Delta EVE^{90}$ and $\Delta NII^{90}$ in descending order and extract $\mathrm{VaR}_{0.99}$ and $\mathrm{ES}_{0.99}$.
+
+    \item \textbf{Capital requirement}: take the maximum of the two VaR measures as the CSRBB capital requirement.
+\end{enumerate}
+
+\subsection{Key Modelling Decisions}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{4.5cm} p{9cm}}
+    \toprule
+    Decision & Recommendation \\
+    \midrule
+    Risk-free curve & ECB AAA EUR sovereign (Bund-equivalent); avoid EURIBOR OIS for EURIBOR-linked floating instruments \\
+    VaR approach & Portfolio-level HSVaR (vs instrument-level): more realistic, avoids combining independent stress events \\
+    Liabilities in EVE & Exclude unless callable / re-emittable; include floating-rate liabilities in NII \\
+    Mirroring & Optional; significantly increases conservatism — use as a sensitivity check \\
+    Data window & Minimum 10 years; extend to 15+ for greater stress coverage \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Conservative Adjustments}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Instrument-level VaR}: compute VaR separately per instrument, then sum — allows independent stress scenarios across instruments.
+    \item \textbf{Mirroring}: for each observed CS movement $\Delta CS$, include $-\Delta CS$ in the dataset, doubling the sample and forcing symmetry.
+    \item \textbf{Extended data window}: include pre-2013 GFC data to capture the 2008--2009 sovereign spread crisis.
+\end{itemize}
+
+% ─────────────────────────────────────────────
+\section{Backtesting Guidelines}
+% ─────────────────────────────────────────────
+
+\subsection{Objective}
+
+Backtesting verifies that the $\mathrm{VaR}_{0.99}$ model is correctly calibrated: the actual 90-day loss should exceed the predicted VaR in no more than 1\% of observations.
+
+\subsection{Procedure}
+
+\begin{enumerate}
+    \item For each trading day $t$ in the backtesting window (full calendar year recommended), compute the VaR and ES using data up to day $t$.
+    \item Record the actual realised $\Delta EVE^{90}_t$ and $\Delta NII^{90}_t$.
+    \item Flag an \textbf{outlier} (exception) whenever the realised value exceeds the predicted VaR.
+    \item Count the total number of outliers $x$ over $N$ observations.
+\end{enumerate}
+
+\subsection{Statistical Assessment — Binomial Test}
+
+The probability of observing exactly $x$ outliers out of $N$ days, under the null hypothesis $H_0: p \leq p_0 = 0.01$, follows a binomial distribution:
+
+\[
+    P(X = x \mid N, p_0) = \binom{N}{x} p_0^x (1 - p_0)^{N-x}
+\]
+
+The cumulative probability of observing at most $x$ outliers:
+
+\[
+    P(X \leq x \mid N, p_0) = \sum_{k=0}^{x} \binom{N}{k} p_0^k (1 - p_0)^{N-k}
+\]
+
+\subsection{Basel Traffic-Light Framework}
+
+The Basel II Annex 10a ``three-zone'' approach classifies backtesting results as follows (for $N \approx 2600$ days, $p_0 = 0.01$):
+
+\begin{center}
+\begin{tabular}{lll}
+    \toprule
+    \textbf{Zone} & \textbf{Outlier Count} & \textbf{Interpretation} \\
+    \midrule
+    \textcolor{green}{\textbf{Green}}  & $0 \leq x \leq 28$  & Model acceptable \\
+    \textcolor{orange}{\textbf{Yellow}} & $29 \leq x \leq 38$ & Model under review \\
+    \textcolor{red}{\textbf{Red}}    & $x \geq 39$         & Model likely rejected \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+For a 1-year backtesting window ($N \approx 250$ trading days):
+
+\[
+    \text{Expected outliers} = N \times p_0 = 250 \times 0.01 = 2.5
+\]
+
+\subsection{Validation Frequency}
+
+\begin{itemize}[noitemsep]
+    \item Backtest against the \textbf{full previous year} at each annual model review.
+    \item Monitor rolling outlier counts quarterly to detect model drift.
+    \item Re-calibrate NSS parameters and data windows whenever the model enters the Yellow zone.
+    \item Document all modelling choices and deviations from EBA guidelines\\
+          in line with \mbox{EBA/GL/2022/14}.
+\end{itemize}
+
+% ─────────────────────────────────────────────
+\section*{References}
+% ─────────────────────────────────────────────
+
+\begin{itemize}[noitemsep]
+    \item EBA/GL/2022/14 — \textit{Guidelines on the management of interest rate risk and credit spread risk arising from non-trading book activities}, EBA, October 2022.
+    \item Pahne, E. \& Åkerlund, L. — \textit{Modelling Credit Spread Risk in the Banking Book (CSRBB)}, KTH Stockholm, 2023.
+    \item Nelson, C.R. \& Siegel, A.F. — \textit{Parsimonious Modeling of Yield Curves}, Journal of Business, 1987.
+    \item Svensson, L.E.O. — \textit{Estimating and Interpreting Forward Interest Rates}, NBER Working Paper, 1994.
+    \item Basel Committee on Banking Supervision — \textit{Supervisory Framework for the Use of Backtesting}, Basel II Annex 10a, 2006.
+\end{itemize}
+
+\end{document}

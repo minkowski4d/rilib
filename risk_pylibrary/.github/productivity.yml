@@ -1,0 +1,16 @@
+name: Productivity
+## Runs some standard checks on the PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  productivity-pr-validation:
+    uses: traderepublic/ghw-productivity/.github/workflows/productivity-pr.yml@v0
+    with:
+      labeler-configuration-path: .github/productivity/labeler.yml
+    secrets: inherit

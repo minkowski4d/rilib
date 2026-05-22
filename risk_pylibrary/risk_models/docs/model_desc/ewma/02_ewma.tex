@@ -1,0 +1,174 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{EWMA Volatility Model}\\[4pt]
+\large Portfolio VaR Engine --- Model Documentation}
+\author{Risk Modelling --- Trade Republic}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+The Exponentially Weighted Moving Average (EWMA) engine estimates a
+time-varying portfolio volatility using an exponential weighting scheme
+and derives parametric VaR and CVaR from either the Normal or Student-$t$
+distribution. This is the RiskMetrics-style approach popularised by
+J.P.\ Morgan (1994).
+
+\textbf{Engine key:} \texttt{'ewma'} \\
+\textbf{Sources:}
+\begin{itemize}
+  \item \texttt{risk\_analytics/risk\_engines.py}, lines 190--225 (VaR/CVaR formulas)
+  \item \texttt{risk\_models/support\_models.py}, lines 12--30 (\texttt{ewma\_volatility})
+\end{itemize}
+
+%-----------------------------------------------------------------------
+\section{EWMA Volatility}
+
+\subsection{Definition}
+
+Given a portfolio return series $\{r_t^{pf}\}$ and a decay parameter
+$\lambda \in (0,1)$, the EWMA variance estimate at time $t$ over a window
+of $T$ observations is:
+\begin{equation}
+\hat{\sigma}_t^2
+= \sum_{k=0}^{T-1} \lambda^k (1 - \lambda)\, \bigl(r_{t-k}^{pf}\bigr)^2
+\label{eq:ewma_var}
+\end{equation}
+The EWMA volatility is $\hat{\sigma}_t = \sqrt{\hat{\sigma}_t^2}$.
+
+\textbf{Weighting scheme.} The weight assigned to observation $k$ periods
+ago is $w_k = \lambda^k(1-\lambda)$, with $\sum_{k=0}^{T-1} w_k \approx 1$
+for large $T$.  More recent observations receive exponentially higher weight,
+allowing the model to respond quickly to volatility regimes. The default
+$\lambda = 0.94$ corresponds to the RiskMetrics specification for daily data.
+
+\subsection{Implementation}
+
+The implementation in \texttt{support\_models.ewma\_volatility()} pre-computes
+the weight vector once and applies it via a sliding window:
+\begin{equation}
+\hat{\sigma}_t^2 = \bigl(\mathbf{w}^\top \mathbf{r}^2\bigr)_t,
+\quad
+\mathbf{w} = \bigl[\lambda^{T-1}(1-\lambda),\, \ldots,\, \lambda^0(1-\lambda)\bigr]
+\end{equation}
+where $\mathbf{r}^2$ denotes element-wise squared returns in the window.
+
+%-----------------------------------------------------------------------
+\section{VaR and CVaR Formulas}
+
+\subsection{Normal Distribution}
+
+The distribution of $r_t^{pf}$ is assumed $\mathcal{N}(\hat{\mu}, \hat{\sigma}_t^2)$,
+where $\hat{\mu}$ is the MLE sample mean.
+
+\textbf{Value-at-Risk:}
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{\text{N}}
+= \hat{\mu} - \hat{\sigma}_t \cdot \Phi^{-1}(\alpha)
+\label{eq:ewma_var_norm}
+\end{equation}
+Since $\alpha < 0.5$, we have $\Phi^{-1}(\alpha) < 0$, so
+$\widehat{\text{VaR}}_\alpha^{\text{N}} > 0$ (a positive loss).
+
+\textbf{Conditional VaR (Expected Shortfall):}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{\text{N}}
+= -\hat{\mu} + \hat{\sigma}_t \cdot \frac{\phi\!\left(\Phi^{-1}(\alpha)\right)}{\alpha}
+\label{eq:ewma_cvar_norm}
+\end{equation}
+where $\phi(\cdot)$ is the standard Normal PDF and $\Phi^{-1}(\cdot)$ is the
+Normal quantile function. This is the closed-form CVaR for a Gaussian distribution.
+
+\subsection{Student-$t$ Distribution}
+
+The distribution of $r_t^{pf}$ is assumed Student-$t$ with $\nu$ degrees of freedom,
+location $\hat{\mu}_t$, and scale $\hat{s}_t$, all estimated via MLE.
+
+\textbf{Value-at-Risk:}
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{t}
+= \hat{\mu}_t - \hat{\sigma}_t \sqrt{\frac{\nu - 2}{\nu}} \cdot t^{-1}(\alpha;\nu)
+\label{eq:ewma_var_t}
+\end{equation}
+The $\sqrt{(\nu-2)/\nu}$ term converts the MLE scale parameter to the
+standard deviation of the fitted $t$-distribution.
+
+\textbf{Conditional VaR (Expected Shortfall):}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{t}
+= -\hat{\mu}_t - \frac{\hat{\sigma}_t}{\alpha(1-\nu)}
+  \Bigl(\nu - 2 + \bigl[t^{-1}(\alpha;\nu)\bigr]^2\Bigr)
+  \cdot f_t\!\left(t^{-1}(\alpha;\nu);\nu\right)
+\label{eq:ewma_cvar_t}
+\end{equation}
+where $t^{-1}(\alpha;\nu)$ is the $\alpha$-quantile of the standard
+Student-$t$ distribution with $\nu$ degrees of freedom, $f_t(\cdot;\nu)$
+is its PDF, and $\nu \geq 3$ is enforced (a floor of 3 is applied if the
+MLE estimate falls below 2).
+
+\subsection{Holding-Period Scaling}
+
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{(H)} = \widehat{\text{VaR}}_\alpha^{(1)} \cdot \sqrt{H},
+\qquad
+\widehat{\text{CVaR}}_\alpha^{(H)} = \widehat{\text{CVaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{window}  & int   & 250   & Lookback window for volatility estimation \\
+\texttt{decay}   & float & 0.94  & EWMA decay $\lambda$ (RiskMetrics default) \\
+\texttt{distr}   & str   & \texttt{'norm'} & Distribution: \texttt{'norm'} or \texttt{'t'} \\
+\texttt{qtls}    & list  & [0.05, 0.01, 0.001] & Tail probability levels \\
+\texttt{holding\_period} & int & 1 & Forecast horizon in days \\
+\texttt{verbose} & bool  & True  & Print model setup information \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{6cm} p{8cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+Adapts quickly to volatility changes & No asymmetric (leverage) effects \\
+Closed-form VaR and CVaR & Assumes a single time-varying scale \\
+Computationally inexpensive & Parametric tail; may underestimate extreme losses \\
+RiskMetrics industry standard & EWMA variance ignores the mean \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_analytics import risk_engines as re
+
+var_ewma = re.portfolio_vaR(
+    rets_orig  = rets,
+    wgts       = weights,
+    engine     = 'ewma',
+    fmt_engine = {
+        'window'         : 250,
+        'decay'          : 0.94,
+        'distr'          : 'norm',
+        'qtls'           : [0.05, 0.01, 0.001],
+        'holding_period' : 1,
+    }
+)
+\end{lstlisting}
+
+\end{document}

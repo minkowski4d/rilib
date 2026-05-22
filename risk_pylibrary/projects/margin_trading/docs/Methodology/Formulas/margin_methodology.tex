@@ -1,0 +1,1744 @@
+% ============================================================
+% Margin Requirements — Formula Reference
+% Trade Republic — Margin Trading Methodology
+% Compile with: pdflatex margin_methodology.tex
+% ============================================================
+
+\documentclass[9pt, a4paper]{extarticle}
+
+% ── Packages ─────────────────────────────────────────────
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault]{inter}
+\usepackage{parskip}
+\usepackage{longtable}
+\usepackage{textcomp}
+
+% ── Hyperref ─────────────────────────────────────────────
+\hypersetup{
+    hidelinks,
+    pdftitle  = {Margin Requirements — Formula Reference},
+    pdfauthor = {},
+}
+
+% ── Section heading styles ────────────────────────────────
+\titleformat{\section}
+    {\large\bfseries}
+    {\thesection.}{0.6em}{}
+    [\titlerule]
+
+\titleformat{\subsection}
+    {\normalsize\bfseries}
+    {\thesubsection}{0.6em}{}
+
+\titleformat{\subsubsection}
+    {\normalsize\itshape}
+    {\thesubsubsection}{0.6em}{}
+
+\titlespacing{\section}{0pt}{1.6em}{0.8em}
+\titlespacing{\subsection}{0pt}{1.2em}{0.4em}
+\titlespacing{\subsubsection}{0pt}{1.0em}{0.3em}
+
+% ── Header / Footer ──────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textit{Margin Requirements — Formula Reference}}
+\fancyhead[R]{\small\textsc{Strictly Private \& Confidential} $|$ March 2026}
+\fancyfoot[C]{\small\thepage}
+
+% ── Formula block environment ─────────────────────────────
+\newenvironment{formulabox}{\par\addvspace{4pt}}{\par\addvspace{4pt}}
+
+% ── Variable table command ────────────────────────────────
+\newcommand{\vartableheader}{%
+    \textbf{Symbol} & \textbf{Description}\\
+}
+
+% ── Euro symbol ──────────────────────────────────────────
+\newcommand{\EUR}[1]{\ifmmode\text{\texteuro}#1\else\texteuro#1\fi}
+
+% ── Misc ─────────────────────────────────────────────────
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+% ─────────────────────────────────────────────────────────
+\begin{document}
+% ─────────────────────────────────────────────────────────
+
+% ── Title page ───────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{4cm}
+    {\rule{\linewidth}{1.2pt}}\\[0.6em]
+    {\Huge\bfseries Margin Requirements}\\[0.4em]
+    {\Large Formula Reference Document}\\[0.4em]
+    {\rule{\linewidth}{1.2pt}}\\[2em]
+    {\large Trade Republic — Margin Trading Methodology}\\[0.5em]
+    {\normalsize Version 1.0 \quad|\quad March 2026}\\[0.5em]
+    {\normalsize Classification: Strictly Private \& Confidential}
+    \vfill
+    {\small This document sets out all quantitative formulas used in Trade Republic's
+    Margin Requirements Methodology. Formulas are presented in the order in which
+    they appear in the methodology document, grouped by component. Variable
+    definitions accompany each formula block. A consolidated formula reference
+    appears in the Appendix.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────
+%  SECTION D — MARGIN
+% ─────────────────────────────────────────────────────────
+\section{Margin (Section D)}
+\label{sec:margin}
+
+\subsection{D.1 — Four Layers of Margin}
+
+The margin requirement framework consists of four layers applied on an
+instrument-by-instrument basis:
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{Initial Margin (IM)} — minimum equity to open a leveraged position.
+    \item \textbf{Maintenance Margin (MM)} — minimum equity the customer must maintain
+          at all times after a position is opened.
+    \item \textbf{Variation Margin (VM)} — daily cash P\&L settlement applied to all
+          open positions subject to mark-to-market valuation.
+    \item \textbf{Overnight Maintenance Margin} — additional haircut-based collateral
+          requirement applied at end-of-day to account for the inability to monitor
+          positions outside of trading hours.
+\end{enumerate}
+
+\subsubsection{D.1.1 — Initial Margin Rate}
+
+The initial margin rate is the minimum equity the customer must post before a
+leveraged position can be opened. It is calibrated at instrument level using a
+scenario-based Value-at-Risk methodology and is expressed as a fraction of the
+notional position value. The rate is composed of two additive components: a Market
+Risk Component (MRC), which captures the potential loss over the assumed liquidation
+horizon at a 99\% confidence level, and a Liquidity Component (LC), which accounts
+for the cost of unwinding the position in adverse market conditions.
+
+\begin{formulabox}
+\textbf{Initial Margin Rate}
+\begin{equation*}
+    \mathrm{IM}_{\text{rate}}(i) \;=\; \mathrm{MRC}(i) \;+\; \mathrm{LC}(i)
+\end{equation*}
+\textbf{Market Risk Component}
+\begin{equation*}
+    \mathrm{MRC}(i) \;=\; \max\!\Bigl(\mathrm{RVaR}^{\text{hist}}(i) + \mathrm{CB}(i),\;
+                           w_s \cdot \mathrm{RVaR}^{\text{stress}}(i)\Bigr)
+\end{equation*}
+\textbf{Liquidity Component}
+\begin{equation*}
+    \mathrm{LC}(i) \;=\; \mathrm{DF} \cdot \mathrm{RVaR}^{\text{hist}}(i) \cdot \lambda(i)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{IM}_{\text{rate}}(i)$      & Initial margin rate for instrument $i$ as a fraction of position value \\
+$\mathrm{MRC}(i)$                   & Market Risk Component for instrument $i$ \\
+$\mathrm{LC}(i)$                    & Liquidity Component for instrument $i$ \\
+$\mathrm{RVaR}^{\text{hist}}(i)$    & Robust VaR from filtered historical scenarios (see Section~D.2.4) \\
+$\mathrm{RVaR}^{\text{stress}}(i)$  & Robust VaR from stressed scenarios (see Section~D.2.2) \\
+$\mathrm{CB}(i)$                    & Correlation Break adjustment (see Section~D.2.4) \\
+$w_s$                               & Stress weight (default: 0.5) \\
+$\mathrm{DF}$                       & Diversification factor for the liquidation group \\
+$\lambda(i)$                        & Days-to-liquidate scaling factor for instrument $i$ \\
+\bottomrule
+\end{tabularx}
+
+The initial margin rate is computed on a standalone basis per instrument, meaning
+each instrument is treated as its own liquidation group. This ensures that the rate
+displayed to the customer prior to trade execution reflects the true cost of holding
+that specific instrument on leverage, without benefit from diversification across
+instruments the customer does not hold. Full details of the calibration methodology
+are provided in Section~D.2.
+
+\subsubsection{D.1.2 — Maintenance Margin Rate}
+
+The maintenance margin rate represents the minimum equity ratio the customer must
+maintain at all times after a leveraged position is opened. It is expressed as a
+minimum Adjusted Collateral Value relative to the outstanding loan, governed by the
+LTV monitoring threshold $\overline{\mathrm{LTV}}$. For each instrument $i$, the
+required minimum ACV at time $t$ is:
+
+\begin{formulabox}
+\textbf{Minimum Required ACV}
+\begin{equation*}
+    \mathrm{ACV}^{\min}_{t} \;=\; \frac{L_t}{\overline{\mathrm{LTV}}}
+\end{equation*}
+\textbf{Maintenance Margin Rate}
+\begin{equation*}
+    \mathrm{MM}_{\text{rate}}(i) \;=\; 1 \;-\; \overline{\mathrm{LTV}} \cdot \bigl(1 - h_{\mathrm{eff}}(i)\bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{ACV}^{\min}_{t}$   & Minimum Adjusted Collateral Value required at time $t$ \\
+$L_t$                        & Outstanding loan balance at time $t$ \\
+$\overline{\mathrm{LTV}}$    & LTV monitoring threshold (default: 75\%) \\
+$h_{\mathrm{eff}}(i)$        & Effective haircut for instrument $i$ (see Section~E.2) \\
+$\mathrm{MM}_{\text{rate}}(i)$ & Maintenance margin rate for instrument $i$ as a fraction of market value \\
+\bottomrule
+\end{tabularx}
+
+The maintenance margin rate is instrument-specific: instruments with higher effective
+haircuts require a larger minimum equity cushion for the same loan amount. A customer
+whose ACV falls below $\mathrm{ACV}^{\min}_t$ — equivalently, whose LTV exceeds
+$\overline{\mathrm{LTV}}$ — is subject to the escalation framework described in
+Section~D.1.4.
+
+\paragraph{Two-Phase LTV Framework.}
+The margin framework operates in two distinct phases tied to the liquidation horizon
+$T_{\text{liq}}$ (default: 4 trading days):
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Phase~1 — Opening ($t = 0$):} At trade inception the customer must
+          post Initial Margin, so the opening LTV is directly determined by the IM
+          rate:
+          \begin{equation*}
+              \mathrm{LTV}_0 \;=\; \frac{L_0}{\mathrm{ACV}_0}
+                              \;=\; \frac{1 - \mathrm{IM}_{\text{rate}}(i)}{1 - h_{\mathrm{eff}}(i)}
+          \end{equation*}
+
+    \item \textbf{Phase~2 — Seasoned ($t > T_{\text{liq}}$):} Once the position has
+          been held beyond the liquidation horizon, the Initial Margin requirement no
+          longer applies. The binding constraint becomes the maintenance margin
+          threshold $\overline{\mathrm{LTV}} = 75\%$, monitored continuously via
+          daily Variation Margin and end-of-day Overnight Maintenance Margin. The
+          outstanding loan evolves as:
+          \begin{equation*}
+              L_t \;=\; L_0 - \sum_{\tau=1}^{t} \mathrm{VM}_\tau
+          \end{equation*}
+          and a margin event is triggered whenever $\mathrm{LTV}_t > \overline{\mathrm{LTV}}$.
+\end{itemize}
+
+This two-phase structure ensures that the Initial Margin covers the worst-case loss
+over the full liquidation horizon, while the lighter Maintenance Margin framework
+governs the ongoing life of the position once that horizon has elapsed.
+
+\subsubsection{D.1.3 — Variation Margin}
+
+The profit or loss arising from the change in the theoretical value of an open
+position between two consecutive trading days. Gains and losses are settled
+symmetrically and variation margin is not held as collateral.
+
+\begin{formulabox}
+\textbf{Variation Margin}
+\begin{equation*}
+    \mathrm{VM}_{i,t} =
+        \bigl(P_{i,t} - P_{i,t-1}\bigr) \times N_i
+\end{equation*}
+\textit{Positive VM is credited to the customer; negative VM is debited.
+Applied to all positions on every trading day.}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{VM}_{i,t}$  & Variation Margin for instrument $i$ on day $t$ \\
+$P_{i,t}$            & Settlement price of instrument $i$ on day $t$ \\
+$P_{i,t-1}$          & Settlement price of instrument $i$ on the previous trading day \\
+$N_i$                & Quantity held of instrument $i$ \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{D.1.4 — Overnight Maintenance Margin}
+
+At the close of each trading day, Trade Republic applies an overnight maintenance
+margin requirement to all open leveraged positions, reflecting the increased risk
+arising from the inability to monitor or act on adverse price movements outside of
+trading hours. The overnight margin is expressed as a minimum Adjusted Collateral
+Value relative to the outstanding loan, calibrated using a one-day parametric
+Value-at-Risk at the 99\% confidence level, scaled to the overnight holding period.
+Specifically, the overnight haircut applied to each instrument is derived as:
+
+\begin{formulabox}
+\textbf{Overnight Haircut}
+\begin{equation*}
+    h_{\text{overnight}}(i) \;=\;
+        h_{\text{floor}}\!\bigl(\text{class}(i)\bigr)
+        \;+\;
+        w_{\text{buf}} \cdot
+        \max\!\Bigl(0,\; h_{\text{vol}}(i) - h_{\text{floor}}\!\bigl(\text{class}(i)\bigr)\Bigr)
+\end{equation*}
+\end{formulabox}
+
+where $h_{\text{floor}}$ is the asset-class minimum haircut, $h_{\text{vol}}$ is the
+volatility-implied haircut based on the instrument's EWMA historical volatility, and
+$w_{\text{buf}}$ is a volatility buffer weight. This ensures that the collateral
+discount applied overnight is anchored to a regulatory-grade asset class floor while
+remaining responsive to current market conditions. Any customer whose LTV breaches
+the monitoring threshold of 75\% at end-of-day is subject to an overnight margin
+review, with corrective action --- either additional collateral posting or partial
+position reduction --- required prior to the opening of the next trading session.
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$h_{\text{overnight}}(i)$ & Overnight haircut for instrument $i$ \\
+$h_{\text{floor}}(\text{class}(i))$ & Asset-class minimum haircut floor \\
+$h_{\text{vol}}(i)$ & Volatility-implied haircut based on EWMA historical volatility \\
+$w_{\text{buf}}$ & Volatility buffer weight $(0 \leq w_{\text{buf}} \leq 1)$ \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{D.1.5 — Monitoring Framework}
+
+The monitoring framework operates in two distinct phases determined by the
+liquidation horizon $T_{\text{liq}}$ (default: 4 trading days). The set of active
+checks and the associated breach actions differ between the two phases.
+
+\paragraph{Phase 1 — Within Liquidation Horizon ($0 < t \leq T_{\text{liq}}$).}
+During this phase the Initial Margin buffer is still the primary safeguard. Daily
+Variation Margin is applied and the LTV is monitored continuously. A breach signals
+that adverse price moves have consumed the IM buffer faster than the position can be
+wound down.
+
+\begin{center}
+\begin{tabularx}{0.96\linewidth}{lXl}
+\toprule
+\textbf{Check} & \textbf{Condition} & \textbf{Action} \\
+\midrule
+IM\,+\,VM intraday
+    & $\mathrm{LTV}_t = L_t / \mathrm{ACV}_t > \overline{\mathrm{LTV}}$
+    & Monitoring alert \\
+IM\,+\,VM end-of-day
+    & $\mathrm{LTV}_t^{\text{overnight}} > \overline{\mathrm{LTV}}$
+    & Overnight margin review \\
+Liquidation
+    & $\mathrm{LTV}_t > \mathrm{LTV}_{\text{liq}}$
+    & Auto-liquidate \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+where the loan evolves daily as:
+\[
+    L_t = L_0 - \sum_{\tau=1}^{t} \mathrm{VM}_\tau
+\]
+and $\mathrm{LTV}_t^{\text{overnight}}$ uses the overnight haircut $h_{\text{overnight}}(i)$
+(Section~D.1.4) in place of $h_{\text{eff}}(i)$ when computing $\mathrm{ACV}_t$.
+
+\paragraph{Phase 2 — Seasoned Position ($t > T_{\text{liq}}$).}
+Once the position has been held beyond the liquidation horizon, the Initial Margin
+requirement is no longer binding. The lighter Maintenance Margin framework applies,
+supplemented by the overnight check at each close of business.
+
+\begin{center}
+\begin{tabularx}{0.96\linewidth}{lXl}
+\toprule
+\textbf{Check} & \textbf{Condition} & \textbf{Action} \\
+\midrule
+VM intraday
+    & $\mathrm{LTV}_t > \overline{\mathrm{LTV}}$
+    & Monitoring alert \\
+MM end-of-day
+    & $\mathrm{LTV}_t^{\text{overnight}} > \overline{\mathrm{LTV}}$
+    & Overnight margin review \\
+Liquidation
+    & $\mathrm{LTV}_t > \mathrm{LTV}_{\text{liq}}$
+    & Auto-liquidate \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Escalation Logic.}
+The three breach conditions are ordered by severity and share the same LTV
+thresholds across both phases:
+
+\begin{center}
+\begin{tabularx}{0.96\linewidth}{lllX}
+\toprule
+\textbf{Level} & \textbf{Trigger} & \textbf{LTV Threshold} & \textbf{Description} \\
+\midrule
+1 — Monitoring
+    & $\mathrm{ACV}_t < L_t\,/\,\overline{\mathrm{LTV}}$
+    & $75\%$
+    & Enhanced surveillance; no immediate customer action required \\
+2 — Overnight breach
+    & $\mathrm{ACV}_t^{\text{overnight}} < L_t\,/\,\overline{\mathrm{LTV}}$
+    & $75\%$ (overnight ACV)
+    & Customer must post collateral or reduce loan before next open \\
+3 — Liquidation
+    & $\mathrm{ACV}_t < L_t\,/\,\mathrm{LTV}_{\text{liq}}$
+    & $90\%$
+    & Positions auto-liquidated to repay outstanding loan \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$T_{\text{liq}}$                    & Liquidation horizon (default: 4 trading days) \\
+$L_t$                               & Outstanding loan at time $t$, net of accumulated VM \\
+$\mathrm{ACV}_t$                    & Adjusted Collateral Value at time $t$ using intraday haircut $h_{\text{eff}}$ \\
+$\mathrm{ACV}_t^{\text{overnight}}$ & Adjusted Collateral Value at close using overnight haircut $h_{\text{overnight}}$ \\
+$\overline{\mathrm{LTV}}$           & Monitoring threshold (default: $75\%$) \\
+$\mathrm{LTV}_{\text{liq}}$         & Liquidation threshold (default: $90\%$) \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\subsection{D.2 — Calibration of Margin Rates}
+
+Margin rates are calibrated at instrument level using a Value-at-Risk (VaR)
+methodology designed to estimate the loss that could arise during the assumed
+liquidation horizon at the chosen confidence level.
+
+\subsubsection{D.2.1 — Mapping Liquidation Groups}
+
+Every instrument is assigned to a liquidation group $l$ whose members share
+sufficient characteristics — market, asset class, and risk profile — to be
+auctioned together. Each liquidation group may be further divided into
+liquidation group \textit{splits}.
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{D.2.2 — Scenario Construction}
+
+Two distinct scenario sets are constructed to generate hypothetical future
+prices for every instrument.
+
+\paragraph{Filtered Historical Scenarios.}
+The first set consists of 750 observations drawn from recent market history.
+For each historical date $s$, the realised return over the relevant holding
+period is rescaled to reflect current volatility conditions — ensuring that
+calm historical periods do not produce an underestimate of today's risk:
+
+\begin{formulabox}
+\textbf{Filtered (Volatility-Scaled) Return}
+\begin{equation*}
+    r_{\mathrm{filt}}(i,s)
+        = r_{\mathrm{hist}}(i,s)
+          \times \frac{\hat{\sigma}_{i,0}}{\hat{\sigma}_{i,s}}
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Filtered Historical Scenario Price}
+\begin{equation*}
+    P_{\mathrm{filt}}(i,s)
+        = P_{i,0} \times \bigl(1 + r_{\mathrm{filt}}(i,s)\bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$r_{\mathrm{hist}}(i,s)$   & Historical return of instrument $i$ over the holding period ending on date $s$ \\
+$\hat{\sigma}_{i,0}$        & Current volatility estimate for instrument $i$ (at $T=0$) \\
+$\hat{\sigma}_{i,s}$        & Historical volatility estimate for instrument $i$ at the time of observation $s$ \\
+$P_{i,0}$                   & Current market price of instrument $i$ (at $T=0$) \\
+$P_{\mathrm{filt}}(i,s)$   & Filtered scenario price for instrument $i$ under scenario $s$ \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{Stressed Scenarios.}
+The second set consists of 250 scenarios drawn from identified stress periods in
+market history (exceptional volatility, sharp correlation dislocations, extreme
+price movements). Unlike the filtered scenarios, stressed returns are applied
+\emph{without} any volatility adjustment:
+
+\begin{formulabox}
+\textbf{Stressed Scenario Price}
+\begin{equation*}
+    P_{\mathrm{stress}}(i,s)
+        = P_{i,0} \times \bigl(1 + r_{\mathrm{stress}}(i,s)\bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$r_{\mathrm{stress}}(i,s)$  & Raw historical return of instrument $i$ from a stress period, scenario $s$ \\
+$P_{\mathrm{stress}}(i,s)$  & Stressed scenario price for instrument $i$ under scenario $s$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{D.2.3 — Profit and Loss Distributions}
+
+For each scenario, position-level P\&L is aggregated across instruments within
+a liquidation group split to produce the P\&L distribution used for VaR estimation.
+
+\begin{formulabox}
+\textbf{Instrument P\&L under Scenario $s$}
+\begin{equation*}
+    \mathrm{PL}(i,s) =
+        \bigl(P_{i,0} - P_{\mathrm{scenario}}(i,s)\bigr) \times N_i
+\end{equation*}
+\textit{$P_{\mathrm{scenario}}$ is either $P_{\mathrm{filt}}$ or $P_{\mathrm{stress}}$
+depending on the scenario sub-sample.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Liquidation Group Split P\&L}
+\begin{equation*}
+    \mathrm{PL}(l,s) = \sum_{i \,\in\, l} \mathrm{PL}(i,s)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{PL}(i,s)$  & P\&L of instrument $i$ under scenario $s$ \\
+$\mathrm{PL}(l,s)$  & Portfolio P\&L for liquidation group split $l$ under scenario $s$ \\
+$N_i$               & Quantity held of instrument $i$ \\
+$i \in l$           & All instruments assigned to liquidation group split $l$ \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{D.2.4 — Market Risk Component}
+
+\paragraph{D.2.4.1 — Market Risk Model.}
+
+The market risk component is derived from VaR figures computed from the P\&L
+distributions at a target confidence level of $99\%$.
+
+\medskip
+\textbf{Empirical Quantile.}
+Where the target quantile falls between two observations, linear interpolation
+is applied. Let the P\&L vector be sorted in ascending order with $n$
+observations; the quantile of the $i$-th sorted observation is:
+
+\begin{formulabox}
+\textbf{Empirical Quantile}
+\begin{equation*}
+    q(i) = 100\% \times \frac{i - 0.5}{n}
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Interpolated VaR at confidence level $\alpha$}
+\begin{equation*}
+    \mathrm{VaR}(\alpha) = -\left[
+        \frac{\mathrm{PL}(q^{+})\,\bigl(q^{+} - (1-\alpha)\cdot100\bigr)
+            + \mathrm{PL}(q^{-})\,\bigl((1-\alpha)\cdot100 - q^{-}\bigr)}
+             {q^{+} - q^{-}}
+    \right]
+\end{equation*}
+\textit{$q^{+}$ and $q^{-}$ are the nearest empirical quantiles above and below
+$(1-\alpha)\times100$ respectively. VaR is bounded from below at zero.}
+\end{formulabox}
+
+\medskip
+\textbf{Robust VaR.}
+To improve statistical robustness, VaR is first estimated at a lower
+confidence level ($95\%$ for filtered historical; $90\%$ for stressed scenarios)
+and then scaled to the $99\%$ target using quantiles of a heavy-tailed
+Student-$t$ distribution:
+
+\begin{formulabox}
+\textbf{Robust VaR Scaling Factor}
+\begin{equation*}
+    \mathrm{SF} =
+        \frac{t_{\nu}^{-1}(\alpha_{\mathrm{high}})}
+             {t_{\nu}^{-1}(\alpha_{\mathrm{low}})}
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Robust VaR}
+\begin{equation*}
+    \mathrm{RVaR}(l,a) =
+        \mathrm{VaR}(\alpha_{\mathrm{low}},\,l,\,a) \times \mathrm{SF}
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\alpha$                   & Target confidence level ($0.99$) \\
+$\alpha_{\mathrm{high}}$   & Target confidence level ($0.99$) \\
+$\alpha_{\mathrm{low}}$    & Base confidence level
+                             ($0.95$ for filtered historical; $0.90$ for stressed) \\
+$t_{\nu}^{-1}(\alpha)$     & Quantile (inverse CDF) of the Student-$t$ distribution
+                             at confidence $\alpha$ with $\nu$ degrees of freedom \\
+$\nu$                      & Degrees of freedom of the Student-$t$ distribution \\
+$\mathrm{RVaR}(l,a)$      & Robust VaR for split $l$, scenario sub-sample $a$ \\
+$n$                        & Number of observations in the scenario sub-sample \\
+$q^{+},\,q^{-}$           & Nearest empirical quantiles bracketing the target percentile \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+\textbf{Market Risk Component Aggregation.}
+Robust VaR is computed separately for each scenario sub-sample. The mean across
+sub-samples is taken within each scenario type. The final market risk component
+is the maximum of the filtered historical mean (plus the Correlation Break
+adjustment) and the stressed mean scaled by the stress weighting factor
+$w_s \in [0.60,\,0.70]$:
+
+\begin{formulabox}
+\textbf{Market Risk Component}
+\begin{equation*}
+    \mathrm{MRC}(l) = \max\!\Biggl(
+        \underbrace{\overline{\mathrm{RVaR}}_{\mathrm{hist}}(l)
+                    + \overline{\mathrm{CB}}(l)}_{\text{filtered historical}},\;
+        \underbrace{w_s \cdot
+            \overline{\mathrm{RVaR}}_{\mathrm{stress}}(l)}_{\text{stressed}}
+    \Biggr)
+\end{equation*}
+where $\overline{(\cdot)}$ denotes the mean across scenario sub-samples $a$.
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{MRC}(l)$                                    & Market Risk Component for split $l$ \\
+$\overline{\mathrm{RVaR}}_{\mathrm{hist}}(l)$        & Mean Robust VaR — filtered historical scenarios \\
+$\overline{\mathrm{RVaR}}_{\mathrm{stress}}(l)$      & Mean Robust VaR — stressed scenarios \\
+$\overline{\mathrm{CB}}(l)$                          & Mean Correlation Break Adjustment \\
+$w_s$                                                & Stressed scenario weighting factor (typically $0.60$–$0.70$) \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\paragraph{D.2.4.2 — Model Risk Buffer (Correlation Break Adjustment).}
+
+A Correlation Break adjustment is applied to the market risk component to
+account for the risk that correlations shift adversely during a liquidation.
+The VaR is recalculated over rolling time-windows within the historical data;
+excess risk relative to the full-sample estimate is aggregated via a
+root-mean-square measure and clipped between a floor $\Phi$ and cap $\psi$
+(both expressed as fractions of $\mathrm{RVaR}_{\mathrm{hist}}$):
+
+\begin{formulabox}
+\textbf{Excess Risk per Rolling Sub-Window $T_j$}
+\begin{equation*}
+    \mathrm{RVaR}^{+}(l,a,T_j) =
+        \max\!\Bigl(0,\;
+            \mathrm{RVaR}_{\mathrm{sub}}(l,a,T_j)
+            - \mathrm{RVaR}_{\mathrm{hist}}(l,a)
+        \Bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Root Mean Square Excess Risk}
+\begin{equation*}
+    \mathrm{RMSE}(l,a) =
+        \sqrt{\frac{1}{n^{+}_a}
+              \sum_{j=1}^{n^{+}_a}
+              \bigl[\mathrm{RVaR}^{+}(l,a,T_j)\bigr]^{2}}
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Correlation Break Adjustment}
+\begin{equation*}
+    \mathrm{CB}(l,a) = \mathrm{clip}\!\Bigl(
+        \kappa \cdot \mathrm{RMSE}(l,a),\;
+        \Phi \cdot \mathrm{RVaR}_{\mathrm{hist}}(l,a),\;
+        \psi \cdot \mathrm{RVaR}_{\mathrm{hist}}(l,a)
+    \Bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{RVaR}_{\mathrm{sub}}(l,a,T_j)$ & Robust VaR over rolling window ending at $T_j$,
+                                           sub-sample $a$ \\
+$\mathrm{RVaR}_{\mathrm{hist}}(l,a)$    & Full sub-sample Robust VaR for split $l$,
+                                           sub-sample $a$ \\
+$\mathrm{RVaR}^{+}(l,a,T_j)$           & Excess risk for rolling window ending at $T_j$ \\
+$\mathrm{RMSE}(l,a)$                    & Root mean square of positive excess risk figures \\
+$\kappa$                                & Calibration scaling factor \\
+$n^{+}_a$                               & Count of sub-windows with positive excess risk \\
+$\Phi$                                  & Floor as fraction of $\mathrm{RVaR}_{\mathrm{hist}}$
+                                           (minimum charge) \\
+$\psi$                                  & Cap as fraction of $\mathrm{RVaR}_{\mathrm{hist}}$
+                                           (maximum charge) \\
+$\mathrm{CB}(l,a)$                      & Correlation Break Adjustment for split $l$,
+                                           sub-sample $a$ \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{D.2.5 — Liquidity Risk Component}
+
+The liquidity risk component reflects the market impact and execution costs of
+liquidating positions in real market conditions. It is computed at the position
+level and then aggregated at the liquidation group split level with a
+diversification benefit applied.
+
+\begin{formulabox}
+\textbf{Position-Level Liquidity Risk Component}
+\begin{equation*}
+    \mathrm{LC}(i) =
+        \mathrm{RVaR}_{\mathrm{pos}}(i) \times \lambda(i)
+\end{equation*}
+\textit{The component scales with the positional market risk, reflecting that
+volatile instruments carry greater execution risk. $\lambda(i)$ is the
+instrument-level liquidity factor, capturing market impact relative to traded
+volume.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Diversification Factor}
+\begin{equation*}
+    \mathrm{DF}(l) =
+        \max\!\left(
+            \mathrm{DF}_{\mathrm{floor}},\;
+            \frac{\mathrm{RVaR}_{\mathrm{portfolio}}(l)}
+                 {\displaystyle\sum_{i \,\in\, l} \mathrm{RVaR}_{\mathrm{pos}}(i)}
+        \right)
+\end{equation*}
+\textit{A well-diversified portfolio, where individual risks partially offset
+each other, receives a proportional reduction. The floor ensures a baseline
+liquidity charge is always present.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Aggregate Liquidity Risk Component}
+\begin{equation*}
+    \mathrm{LC}(l) =
+        \mathrm{DF}(l) \times \sum_{i \,\in\, l} \mathrm{LC}(i)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{LC}(i)$                             & Position-level Liquidity Risk Component \\
+$\mathrm{RVaR}_{\mathrm{pos}}(i)$           & Positional Robust VaR for instrument $i$
+                                               $= \mathrm{RVaR}_{\mathrm{unit}}(i) \times |N_i|$ \\
+$\lambda(i)$                                 & Liquidity factor for instrument $i$ \\
+$\mathrm{DF}(l)$                             & Diversification Factor for split $l$ \\
+$\mathrm{DF}_{\mathrm{floor}}$              & Minimum diversification factor \\
+$\mathrm{RVaR}_{\mathrm{portfolio}}(l)$     & Portfolio-level Robust VaR for split $l$ \\
+$\mathrm{LC}(l)$                             & Aggregate Liquidity Risk Component for split $l$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{D.2.6 — Aggregation and Final Initial Margin}
+
+\begin{formulabox}
+\textbf{Initial Margin — Liquidation Group Split}
+\begin{equation*}
+    \mathrm{IM}(l) = \mathrm{MRC}(l) + \mathrm{LC}(l)
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Total Initial Margin — Customer Portfolio}
+\begin{equation*}
+    \mathrm{IM}_{\mathrm{total}} = \sum_{l} \mathrm{IM}(l)
+\end{equation*}
+\textit{No offsets are recognised across liquidation group splits.}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{IM}(l)$               & Initial Margin for liquidation group split $l$ \\
+$\mathrm{MRC}(l)$              & Market Risk Component for split $l$ \\
+$\mathrm{LC}(l)$               & Liquidity Risk Component for split $l$ \\
+$\mathrm{IM}_{\mathrm{total}}$ & Total portfolio Initial Margin \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+%  SECTION E — LTV CALCULATION METHODOLOGY
+% ─────────────────────────────────────────────────────────
+\section{LTV Calculation Methodology (Section E)}
+\label{sec:ltv}
+
+\subsection{E.2 — Collateral LTV: Haircuts on Posted Collateral}
+
+\subsubsection{E.2.2 — Haircut Calibration}
+
+For each eligible collateral instrument, the haircut $H(i)$ is calibrated to
+cover the expected price decline over the collateral liquidation horizon at a
+$99\%$ confidence level, using a historical simulation consistent with the
+initial margin scenario methodology. The resulting accepted value is the
+fraction of market value recognised as satisfying the margin obligation.
+
+\begin{formulabox}
+\textbf{Collateral LTV}
+\begin{equation*}
+    \mathrm{LTV}_{\mathrm{coll}}(i) = 1 - H_{\mathrm{eff}}(i) 
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Accepted Collateral Value}
+\begin{equation*}
+    \mathrm{ACV}(i) = \mathrm{MV}(i) \times \bigl(1 - H_{\mathrm{eff}}(i) \bigr)
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Total Accepted Collateral Value}
+\begin{equation*}
+    \mathrm{ACV}_{\mathrm{total}} =
+        \sum_{i} \mathrm{ACV}(i) + \sum_{j} \mathrm{Cash}(j)
+\end{equation*}
+\textit{Cash posted in EUR is accepted at full value ($H = 0$).
+Non-EUR collateral carries an additional FX add-on applied to $H(i)$.}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$H_{\mathrm{eff}}(i)$            & Haircut for collateral instrument $i$ \\
+$\mathrm{MV}(i)$                & Current market value of collateral instrument $i$ \\
+$\mathrm{LTV}_{\mathrm{coll}}(i)$ & Collateral LTV (accepted fraction of market value) \\
+$\mathrm{ACV}(i)$               & Accepted Collateral Value of instrument $i$ \\
+$\mathrm{ACV}_{\mathrm{total}}$ & Total Accepted Collateral Value \\
+$\mathrm{Cash}(j)$              & Cash posted in currency $j$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{E.2.3 — Concentration Add-ons}
+
+Where a customer's collateral portfolio is concentrated within a correlated group
+of instruments, an additional concentration haircut is applied. The add-on is
+determined from the average pairwise correlation among instruments in each
+collateral asset group $g$:
+
+\begin{formulabox}
+\textbf{Average Pairwise Correlation}
+\begin{equation*}
+    \bar{\rho}(g) =
+        \frac{2}{m(m-1)}
+        \sum_{i < j,\; i,j \,\in\, g} \rho(i,j)
+\end{equation*}
+\textit{Computed over all pairs $(i,j)$ within collateral asset group $g$;
+$m$ is the number of instruments in the group.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Diversification Score}
+\begin{equation*}
+    \mathrm{DS}(g) =
+        \sqrt{\frac{1 + (m-1)\,\bar{\rho}(g)}{m}}
+\end{equation*}
+\textit{$\mathrm{DS}(g) \to 1/\sqrt{m}$ for uncorrelated instruments;
+$\mathrm{DS}(g) \to 1$ as $\bar{\rho}(g) \to 1$ (fully correlated).
+A fully uncorrelated portfolio receives no concentration add-on.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Concentration Add-on Haircut}
+\begin{equation*}
+    H_{\mathrm{conc}}(i,g) =
+        H_{\mathrm{base}}(i) \times
+        \frac{\mathrm{DS}(g) - \mathrm{DS}_{\mathrm{floor}}}
+             {1 - \mathrm{DS}_{\mathrm{floor}}}
+\end{equation*}
+\textit{Applied as an increment to the base haircut where
+$\mathrm{DS}(g) > \mathrm{DS}_{\mathrm{floor}}$.
+As average pairwise correlations rise, the diversification score falls and
+the add-on increases proportionally.}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Effective Haircut}
+\begin{equation*}
+    H_{\mathrm{eff}}(i) = H_{\mathrm{base}}(i) + H_{\mathrm{conc}}(i,g)
+\end{equation*}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\rho(i,j)$                      & Pairwise return correlation between instruments $i$ and $j$ \\
+$\bar{\rho}(g)$                  & Average pairwise correlation within collateral asset group $g$ \\
+$m$                              & Number of instruments in asset group $g$ \\
+$\mathrm{DS}(g)$                 & Diversification Score for asset group $g$ \\
+$\mathrm{DS}_{\mathrm{floor}}$   & Minimum diversification score (floor below which no add-on) \\
+$H_{\mathrm{base}}(i)$           & Base haircut for collateral instrument $i$ \\
+$H_{\mathrm{conc}}(i,g)$         & Concentration add-on haircut for instrument $i$ in group $g$ \\
+$H_{\mathrm{eff}}(i)$            & Effective total haircut for instrument $i$ \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\subsection{E.3 — Loan-to-Value for Margin Lending and Leveraged Positions}
+
+\subsubsection{E.3.2 — LTV Calculation}
+
+The LTV ratio measures the relationship between the outstanding loan exposure and
+the haircut-adjusted collateral value at any point in time. LTV ratios are
+calculated in real time using current market prices, with foreign currency
+positions converted to EUR at current spot rates.
+
+\begin{formulabox}
+\textbf{Net Liquidation Value}
+\begin{equation*}
+    \mathrm{NLV}_t = \mathrm{MV}_{\mathrm{portfolio},t} - L_t
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{LTV Ratio}
+\begin{equation*}
+    \mathrm{LTV}_t =
+        \frac{L_t}{\mathrm{ACV}_{\mathrm{total},t}}
+\end{equation*}
+\textit{An LTV ratio below $1.0$ indicates collateral value exceeds the exposure.
+An LTV ratio at or above $1.0$ triggers action.}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{NLV}_t$                   & Net Liquidation Value at time $t$ \\
+$\mathrm{MV}_{\mathrm{portfolio},t}$ & Market value of all open positions at time $t$ \\
+$L_t$                              & Outstanding loan balance at time $t$ \\
+$\mathrm{LTV}_t$                   & Loan-to-Value ratio at time $t$ \\
+$\mathrm{ACV}_{\mathrm{total},t}$  & Total Accepted Collateral Value at time $t$
+                                     ($= \mathrm{NLV}_t + \text{additional posted collateral}$) \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\subsubsection{E.3.3 — Stress Testing LTV}
+
+In addition to the current LTV ratio, a stress LTV is calculated daily by
+applying the stressed scenario prices from the initial margin framework to both
+the financed positions and the collateral. It identifies positions at material
+risk of breaching margin breach limits under adverse market conditions.
+
+\begin{formulabox}
+\textbf{Stress LTV}
+\begin{equation*}
+    \mathrm{LTV}_{\mathrm{stress}} =
+        \frac{L_t}{\mathrm{ACV}_{\mathrm{stress}}}
+\end{equation*}
+\end{formulabox}
+
+\begin{formulabox}
+\textbf{Stressed Accepted Collateral Value}
+\begin{equation*}
+    \mathrm{ACV}_{\mathrm{stress}} =
+        \sum_{i} \mathrm{MV}_{\mathrm{stress}}(i)
+        \times \bigl(1 - H_{\mathrm{eff}}(i)\bigr)
+        + \sum_{j} \mathrm{Cash}(j)
+\end{equation*}
+\textit{$\mathrm{MV}_{\mathrm{stress}}(i)$ uses scenario prices from the
+stressed scenario set of the initial margin framework.}
+\end{formulabox}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\vartableheader
+\midrule
+$\mathrm{LTV}_{\mathrm{stress}}$     & Stress Loan-to-Value ratio \\
+$\mathrm{ACV}_{\mathrm{stress}}$     & Accepted Collateral Value under stress scenario prices \\
+$\mathrm{MV}_{\mathrm{stress}}(i)$  & Market value of collateral instrument $i$
+                                       at stressed scenario prices \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────
+%  APPENDIX — CONSOLIDATED FORMULA REFERENCE
+% ─────────────────────────────────────────────────────────
+\appendix
+\section{Consolidated Formula Reference}
+\label{app:formulas}
+
+This appendix lists all quantitative formulas from the methodology in the order
+in which they appear, with their canonical names.
+
+\renewcommand{\arraystretch}{1.6}
+
+\begin{longtable}{p{0.05\linewidth} p{0.35\linewidth} p{0.52\linewidth}}
+\toprule
+\textbf{Ref.} & \textbf{Name} & \textbf{Formula} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Ref.} & \textbf{Name} & \textbf{Formula} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\small\itshape Continued on next page}\\
+\endfoot
+\bottomrule
+\endlastfoot
+
+%% ── Section D: Margin ──────────────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.1 — Variation Margin}} \\[2pt]
+
+1
+    & Variation Margin
+    & $\displaystyle \mathrm{VM}_{i,t} = \bigl(P_{i,t} - P_{i,t-1}\bigr) \times N_i$ \\[6pt]
+
+%% ── D.2.2 Scenario Construction ────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.2 — Scenario Construction}} \\[2pt]
+
+2
+    & Filtered (Volatility-Scaled) Return
+    & $\displaystyle r_{\mathrm{filt}}(i,s) = r_{\mathrm{hist}}(i,s)
+       \times \dfrac{\hat{\sigma}_{i,0}}{\hat{\sigma}_{i,s}}$ \\[8pt]
+
+3
+    & Filtered Historical Scenario Price
+    & $\displaystyle P_{\mathrm{filt}}(i,s) = P_{i,0}
+       \times \bigl(1 + r_{\mathrm{filt}}(i,s)\bigr)$ \\[6pt]
+
+4
+    & Stressed Scenario Price
+    & $\displaystyle P_{\mathrm{stress}}(i,s) = P_{i,0}
+       \times \bigl(1 + r_{\mathrm{stress}}(i,s)\bigr)$ \\[6pt]
+
+%% ── D.2.3 P&L Distributions ────────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.3 — Profit and Loss Distributions}} \\[2pt]
+
+5
+    & Instrument P\&L
+    & $\displaystyle \mathrm{PL}(i,s) =
+       \bigl(P_{i,0} - P_{\mathrm{scenario}}(i,s)\bigr) \times N_i$ \\[6pt]
+
+6
+    & Liquidation Group Split P\&L
+    & $\displaystyle \mathrm{PL}(l,s) = \sum_{i \,\in\, l} \mathrm{PL}(i,s)$ \\[6pt]
+
+%% ── D.2.4.1 Market Risk Model ──────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.4.1 — Market Risk Model}} \\[2pt]
+
+7
+    & Empirical Quantile
+    & $\displaystyle q(i) = 100\% \times \dfrac{i-0.5}{n}$ \\[8pt]
+
+8
+    & Interpolated VaR
+    & $\displaystyle \mathrm{VaR}(\alpha) = -\left[
+       \dfrac{\mathrm{PL}(q^{+})(q^{+}-(1-\alpha){\cdot}100)
+            + \mathrm{PL}(q^{-})((1-\alpha){\cdot}100 - q^{-})}
+             {q^{+} - q^{-}}
+      \right]$ \\[8pt]
+
+9
+    & Robust VaR Scaling Factor
+    & $\displaystyle \mathrm{SF} =
+       \dfrac{t_{\nu}^{-1}(\alpha_{\mathrm{high}})}
+             {t_{\nu}^{-1}(\alpha_{\mathrm{low}})}$ \\[8pt]
+
+10
+    & Robust VaR
+    & $\displaystyle \mathrm{RVaR}(l,a) =
+       \mathrm{VaR}(\alpha_{\mathrm{low}},l,a) \times \mathrm{SF}$ \\[6pt]
+
+11
+    & Market Risk Component
+    & $\displaystyle \mathrm{MRC}(l) = \max\!\Bigl(
+       \overline{\mathrm{RVaR}}_{\mathrm{hist}}(l) + \overline{\mathrm{CB}}(l),\;
+       w_s \cdot \overline{\mathrm{RVaR}}_{\mathrm{stress}}(l)
+      \Bigr)$ \\[6pt]
+
+%% ── D.2.4.2 Model Risk Buffer ──────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.4.2 — Model Risk Buffer (Correlation Break Adjustment)}} \\[2pt]
+
+12
+    & Excess Risk per Sub-Window
+    & $\displaystyle \mathrm{RVaR}^{+}(l,a,T_j) =
+       \max\!\bigl(0,\,
+         \mathrm{RVaR}_{\mathrm{sub}}(l,a,T_j) - \mathrm{RVaR}_{\mathrm{hist}}(l,a)
+       \bigr)$ \\[6pt]
+
+13
+    & Root Mean Square Excess Risk
+    & $\displaystyle \mathrm{RMSE}(l,a) =
+       \sqrt{\dfrac{1}{n^{+}_a}
+             \sum_{j=1}^{n^{+}_a}
+             \bigl[\mathrm{RVaR}^{+}(l,a,T_j)\bigr]^{2}}$ \\[8pt]
+
+14
+    & Correlation Break Adjustment
+    & $\displaystyle \mathrm{CB}(l,a) = \mathrm{clip}\!\Bigl(
+       \kappa \cdot \mathrm{RMSE}(l,a),\;
+       \Phi \cdot \mathrm{RVaR}_{\mathrm{hist}}(l,a),\;
+       \psi \cdot \mathrm{RVaR}_{\mathrm{hist}}(l,a)
+      \Bigr)$ \\[6pt]
+
+%% ── D.2.5 Liquidity Risk Component ─────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.5 — Liquidity Risk Component}} \\[2pt]
+
+15
+    & Position-Level Liquidity Charge
+    & $\displaystyle \mathrm{LC}(i) =
+       \mathrm{RVaR}_{\mathrm{pos}}(i) \times \lambda(i)$ \\[6pt]
+
+16
+    & Diversification Factor
+    & $\displaystyle \mathrm{DF}(l) =
+       \max\!\left(
+         \mathrm{DF}_{\mathrm{floor}},\;
+         \dfrac{\mathrm{RVaR}_{\mathrm{portfolio}}(l)}
+               {\sum_{i \,\in\, l} \mathrm{RVaR}_{\mathrm{pos}}(i)}
+       \right)$ \\[8pt]
+
+17
+    & Aggregate Liquidity Risk Component
+    & $\displaystyle \mathrm{LC}(l) =
+       \mathrm{DF}(l) \times \sum_{i \,\in\, l} \mathrm{LC}(i)$ \\[6pt]
+
+%% ── D.2.6 Initial Margin ───────────────────────────────
+
+\multicolumn{3}{l}{\textbf{D.2.6 — Aggregation and Final Initial Margin}} \\[2pt]
+
+18
+    & Initial Margin (Split)
+    & $\displaystyle \mathrm{IM}(l) = \mathrm{MRC}(l) + \mathrm{LC}(l)$ \\[6pt]
+
+19
+    & Total Initial Margin
+    & $\displaystyle \mathrm{IM}_{\mathrm{total}} = \sum_{l} \mathrm{IM}(l)$ \\[6pt]
+
+%% ── E.2 Collateral LTV ─────────────────────────────────
+
+\multicolumn{3}{l}{\textbf{E.2.2 — Haircut Calibration}} \\[2pt]
+
+20
+    & Collateral LTV
+    & $\displaystyle \mathrm{LTV}_{\mathrm{coll}}(i) = 1 - H(i)$ \\[6pt]
+
+21
+    & Accepted Collateral Value
+    & $\displaystyle \mathrm{ACV}(i) = \mathrm{MV}(i) \times \bigl(1 - H(i)\bigr)$ \\[6pt]
+
+22
+    & Total Accepted Collateral Value
+    & $\displaystyle \mathrm{ACV}_{\mathrm{total}} =
+       \sum_{i} \mathrm{ACV}(i) + \sum_{j} \mathrm{Cash}(j)$ \\[6pt]
+
+%% ── E.2.3 Concentration Add-ons ────────────────────────
+
+\multicolumn{3}{l}{\textbf{E.2.3 — Concentration Add-ons}} \\[2pt]
+
+23
+    & Average Pairwise Correlation
+    & $\displaystyle \bar{\rho}(g) =
+       \dfrac{2}{m(m-1)}
+       \sum_{i < j,\; i,j\,\in\, g} \rho(i,j)$ \\[8pt]
+
+24
+    & Diversification Score
+    & $\displaystyle \mathrm{DS}(g) =
+       \sqrt{\dfrac{1 + (m-1)\,\bar{\rho}(g)}{m}}$ \\[8pt]
+
+25
+    & Concentration Add-on Haircut
+    & $\displaystyle H_{\mathrm{conc}}(i,g) =
+       H_{\mathrm{base}}(i)
+       \times \dfrac{\mathrm{DS}(g) - \mathrm{DS}_{\mathrm{floor}}}
+                    {1 - \mathrm{DS}_{\mathrm{floor}}}$ \\[8pt]
+
+26
+    & Effective Haircut
+    & $\displaystyle H_{\mathrm{eff}}(i) =
+       H_{\mathrm{base}}(i) + H_{\mathrm{conc}}(i,g)$ \\[6pt]
+
+%% ── E.3 LTV ────────────────────────────────────────────
+
+\multicolumn{3}{l}{\textbf{E.3 — Loan-to-Value for Margin Lending}} \\[2pt]
+
+27
+    & Net Liquidation Value
+    & $\displaystyle \mathrm{NLV}_t =
+       \mathrm{MV}_{\mathrm{portfolio},t} - L_t$ \\[6pt]
+
+28
+    & LTV Ratio
+    & $\displaystyle \mathrm{LTV}_t =
+       \dfrac{L_t}{\mathrm{ACV}_{\mathrm{total},t}}$ \\[8pt]
+
+29
+    & Stress LTV
+    & $\displaystyle \mathrm{LTV}_{\mathrm{stress}} =
+       \dfrac{L_t}{\mathrm{ACV}_{\mathrm{stress}}}$ \\[6pt]
+
+30
+    & Stressed Accepted Collateral Value
+    & $\displaystyle \mathrm{ACV}_{\mathrm{stress}} =
+       \sum_{i} \mathrm{MV}_{\mathrm{stress}}(i)
+       \times (1 - H_{\mathrm{eff}}(i))
+       + \sum_{j} \mathrm{Cash}(j)$ \\[6pt]
+
+\end{longtable}
+
+\renewcommand{\arraystretch}{1.0}
+
+\vfill
+\begin{center}
+    \rule{0.5\linewidth}{0.4pt}\\[0.5em]
+    {\small\itshape Strictly Private and Confidential.
+    This document is intended for internal use by Trade Republic's risk management
+    function and authorised counterparties. It does not constitute financial or
+    legal advice. All margin calculations are subject to applicable rules,
+    regulations, and the Trade Republic margin trading eligibility policy.}
+\end{center}
+
+% ─────────────────────────────────────────────────────────
+\section{Worked Example — Customer Opens a 3$\times$ Leveraged Position}
+% ─────────────────────────────────────────────────────────
+
+The following example illustrates the end-to-end margin calculation for a customer
+wishing to open a 3$\times$ leveraged position in an equity ETF.
+
+\subsection*{Mock Data}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Instrument          & MSCI World ETF (IE00B4L5Y983) \\
+Current price $P_0$ & \EUR{100.00} per share \\
+Quantity $N$        & 150 shares \\
+Position value      & $\mathrm{MV}_0 = 150 \times \EUR{100} = \EUR{15{,}000}$ \\
+Target leverage     & $3\times$ \\
+Customer equity     & $\EUR{15{,}000} / 3 = \EUR{5{,}000}$ \\
+Loan $L_0$          & $\EUR{15{,}000} - \EUR{5{,}000} = \EUR{10{,}000}$ \\
+Annualised vol $\sigma$ & $18\%$ \\
+Asset-class haircut floor $h_{\text{floor}}$ & $10\%$ (equity ETF) \\
+Volatility buffer weight $w_{\text{buf}}$ & $0.50$ \\
+Haircut horizon     & 1 trading day \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+
+% ── Step 1 ──────────────────────────────────────────────
+\subsection*{Step 1 — Collateral Assessment (Phase 1 / Section E.2)}
+
+\textbf{Volatility-implied haircut} over a 1-day horizon at 99\%:
+\[
+    h_{\text{vol}} = 1 - e^{-z_{0.99}\,\sigma\,\sqrt{1/252}}
+                   = 1 - e^{-2.326 \times 0.18 \times 0.0630}
+                   \approx 2.6\%
+\]
+Since $h_{\text{vol}} = 2.6\% < h_{\text{floor}} = 10\%$, the floor binds and the vol
+excess is zero:
+\[
+    h_{\text{base}} = 10\% + 0.5 \times \max(0,\; 2.6\% - 10\%) = \mathbf{10\%}
+\]
+No concentration add-on ($h_{\text{conc}} = 0$), so $h_{\text{eff}} = 10\%$.
+
+\[
+    \mathrm{ACV}_0 = \EUR{15{,}000} \times (1 - 0.10) = \mathbf{\EUR{13{,}500}}
+\]
+
+% ── Step 2 ──────────────────────────────────────────────
+\subsection*{Step 2 — Initial Margin Calculation (Phase 2 / Section D.2)}
+
+From 250 filtered historical scenarios (volatility-scaled, no Student-t anchor):
+\[
+    \mathrm{RVaR}^{\text{hist}} \approx 5.9\% \quad
+    \text{(99th percentile loss over 5-day liquidation horizon)}
+\]
+\[
+    \mathrm{CB} = 0.5\% \quad \Rightarrow \quad
+    \mathrm{MRC} = 5.9\% + 0.5\% = \mathbf{6.4\%}
+\]
+\[
+    \mathrm{LC} = \mathrm{DF} \times \mathrm{RVaR}^{\text{hist}} \times \lambda
+               = 0.85 \times 5.9\% \times 1.0 = \mathbf{5.0\%}
+\]
+\[
+    \mathrm{IM}_{\text{rate}} = 6.4\% + 5.0\% = \mathbf{11.4\%}
+    \quad \Rightarrow \quad
+    \mathrm{IM}_{\text{EUR}} = 11.4\% \times \EUR{15{,}000} = \mathbf{\EUR{1{,}710}}
+\]
+
+% ── Step 3 ──────────────────────────────────────────────
+\subsection*{Step 3 — Trade Execution Gate (Phase 3)}
+
+\begin{tabularx}{\linewidth}{lllX}
+\toprule
+\textbf{Check} & \textbf{Value} & \textbf{Threshold} & \textbf{Result} \\
+\midrule
+Customer equity vs.\ IM & \EUR{5{,}000} $\geq$ \EUR{1{,}710} & IM$_{\text{EUR}}$ & \textbf{Pass} \\
+ACV vs.\ IM             & \EUR{13{,}500} $\geq$ \EUR{1{,}710} & IM$_{\text{EUR}}$ & \textbf{Pass} \\
+Opening LTV             & $\EUR{10{,}000} / \EUR{13{,}500} = 74.1\%$ & $75\%$ & \textbf{Pass} \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+All checks pass. \textbf{Position is opened.}
+
+\[
+    \mathrm{LTV}_0 = \frac{L_0}{\mathrm{ACV}_0}
+                   = \frac{\EUR{10{,}000}}{\EUR{13{,}500}} = 74.1\%
+\]
+
+\[
+    \text{Max leverage at LTV}=75\%:\quad
+    L^* = \frac{1}{0.25 + 0.75 \times 0.10} = \frac{1}{0.325} = 3.08\times
+    \quad \checkmark
+\]
+
+% ── Step 4a ─────────────────────────────────────────────
+\subsection*{Step 4a — Day 1: Adverse Price Move (Phase 4 / Section D.1.3)}
+
+Price falls from \EUR{100} to \EUR{97} ($-3\%$):
+
+\[
+    \mathrm{VM}_1 = (97 - 100) \times 150 = -\EUR{450}
+    \quad \text{(debited from customer account)}
+\]
+\[
+    \mathrm{MV}_1 = 97 \times 150 = \EUR{14{,}550}
+    \qquad
+    \mathrm{ACV}_1 = \EUR{14{,}550} \times 0.90 = \EUR{13{,}095}
+\]
+\[
+    \mathrm{LTV}_1 = \frac{\EUR{10{,}000}}{\EUR{13{,}095}} = \mathbf{76.4\%}
+    > 75\% \quad \Rightarrow \quad \textbf{Monitoring alert triggered}
+\]
+
+% ── Step 5a ─────────────────────────────────────────────
+\subsection*{Step 5a — Day 1: LTV Limit Check (Phase 5 / Section G.3.4)}
+
+\begin{tabularx}{\linewidth}{llll}
+\toprule
+\textbf{Threshold} & \textbf{Limit} & \textbf{LTV$_1$} & \textbf{Action} \\
+\midrule
+Monitoring  & $75\%$ & $76.4\%$ & \textbf{Flag — enhanced surveillance} \\
+Margin breach & $80\%$ & $76.4\%$ & No action \\
+Liquidation & $90\%$ & $76.4\%$ & No action \\
+\bottomrule
+\end{tabularx}
+
+% ── Step 4b ─────────────────────────────────────────────
+\subsection*{Step 4b — Day 2: Price Recovery (Phase 4)}
+
+Price recovers from \EUR{97} to \EUR{99} ($+2.1\%$):
+
+\[
+    \mathrm{VM}_2 = (99 - 97) \times 150 = +\EUR{300}
+    \quad \text{(credited to customer account)}
+\]
+\[
+    \mathrm{MV}_2 = 99 \times 150 = \EUR{14{,}850}
+    \qquad
+    \mathrm{ACV}_2 = \EUR{14{,}850} \times 0.90 = \EUR{13{,}365}
+\]
+\[
+    \mathrm{LTV}_2 = \frac{\EUR{10{,}000}}{\EUR{13{,}365}} = \mathbf{74.8\%}
+    < 75\% \quad \Rightarrow \quad \textbf{Monitoring flag cleared — position healthy}
+\]
+
+% ── Summary ─────────────────────────────────────────────
+\subsection*{Summary}
+
+\begin{tabularx}{\linewidth}{lllll}
+\toprule
+\textbf{Day} & \textbf{Price} & \textbf{VM} & \textbf{ACV} & \textbf{LTV} \\
+\midrule
+$t=0$ (open) & \EUR{100.00} & --- & \EUR{13{,}500} & $74.1\%$ \quad OK \\
+$t=1$        & \EUR{97.00}  & $-$\EUR{450} & \EUR{13{,}095} & $76.4\%$ \quad \textit{Monitoring} \\
+$t=2$        & \EUR{99.00}  & $+$\EUR{300} & \EUR{13{,}365} & $74.8\%$ \quad OK \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+The example demonstrates that a $3\times$ leveraged position in this instrument opens
+comfortably within the 75\% LTV limit and that daily Variation Margin adjustments
+provide a dynamic early-warning mechanism. A single adverse 3\% daily move is
+sufficient to trigger the monitoring threshold, highlighting the sensitivity of
+leveraged positions to price changes and the importance of the ongoing maintenance
+margin framework.
+
+% ─────────────────────────────────────────────────────────
+\subsection*{Extended Example — Monitoring Framework Across Liquidation Horizon}
+% ─────────────────────────────────────────────────────────
+
+The following extends the worked example above to illustrate the two-phase monitoring
+framework (Section~D.1.5), including the loan evolution through Variation Margin,
+the overnight haircut check, and the transition to the seasoned phase at $t = 5$.
+
+\paragraph{Setup.}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Opening price $P_0$              & \EUR{100.00} \\
+Quantity $N$                     & 150 shares \\
+Position value $\mathrm{MV}_0$   & \EUR{15{,}000} \\
+Opening loan $L_0$               & \EUR{10{,}000} \\
+Intraday haircut $h_{\text{eff}}$     & $10\%$ \\
+Overnight haircut $h_{\text{overnight}}$ & $14\%$ \\
+Monitoring threshold $\overline{\mathrm{LTV}}$ & $75\%$ \\
+Liquidation threshold $\mathrm{LTV}_{\text{liq}}$ & $90\%$ \\
+Liquidation horizon $T_{\text{liq}}$ & 4 trading days \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+
+\paragraph{Step 1 — Collateral Assessment.}
+\[
+    h_{\text{vol}} = 1 - e^{-2.326 \times 0.18 \times \sqrt{1/252}} \approx 2.6\%
+    \;<\; h_{\text{floor}} = 10\% \quad\Rightarrow\quad h_{\text{eff}} = 10\%
+\]
+\[
+    \mathrm{ACV}_0 = \EUR{15{,}000} \times (1 - 0.10) = \EUR{13{,}500}
+\]
+
+\paragraph{Step 2 — Initial Margin.}
+\[
+    \mathrm{RVaR}^{\text{hist}} \approx 5.9\%,\quad
+    \mathrm{CB} = 0.5\%,\quad
+    \mathrm{MRC} = 6.4\%,\quad
+    \mathrm{LC} = 5.0\%
+\]
+\[
+    \mathrm{IM}_{\text{rate}} = 11.4\%
+    \quad\Rightarrow\quad
+    \mathrm{IM}_{\text{EUR}} = \EUR{1{,}710}
+\]
+
+\paragraph{Step 3 — Execution Gate.}
+\[
+    \mathrm{LTV}_0 = \frac{\EUR{10{,}000}}{\EUR{13{,}500}} = 74.1\%
+    \;<\; 75\% \quad\checkmark \quad \textbf{Position opened.}
+\]
+
+\paragraph{Step 4 — Day 1: Price $-3\%$ to \EUR{97} \textnormal{(Phase 1 — within liquidation horizon)}.}
+\[
+    \mathrm{VM}_1 = (97 - 100) \times 150 = -\EUR{450}
+    \qquad
+    L_1 = \EUR{10{,}000} - (-\EUR{450}) = \EUR{10{,}450}
+\]
+\[
+    \mathrm{ACV}_1 = \EUR{14{,}550} \times 0.90 = \EUR{13{,}095}
+    \qquad
+    \mathrm{LTV}_1 = \frac{\EUR{10{,}450}}{\EUR{13{,}095}} = 79.8\%
+    \;>\; 75\%
+\]
+\textbf{Monitoring alert triggered (IM\,+\,VM breach, Phase~1).}
+
+\paragraph{Step 5 — Day 1 End-of-Day: Overnight Check.}
+\[
+    \mathrm{ACV}_1^{\text{overnight}} = \EUR{14{,}550} \times (1 - 0.14) = \EUR{12{,}513}
+    \qquad
+    \mathrm{LTV}_1^{\text{overnight}} = \frac{\EUR{10{,}450}}{\EUR{12{,}513}} = 83.5\%
+    \;>\; 75\%
+\]
+\textbf{Overnight margin review triggered.} Customer must post additional collateral
+or reduce the loan before next open. $83.5\% < 90\%$: no liquidation.
+
+\paragraph{Step 6 — Day 2: Price $+2\%$ to \EUR{99}.}
+\[
+    \mathrm{VM}_2 = (99 - 97) \times 150 = +\EUR{300}
+    \qquad
+    L_2 = \EUR{10{,}450} - \EUR{300} = \EUR{10{,}150}
+\]
+\[
+    \mathrm{ACV}_2 = \EUR{14{,}850} \times 0.90 = \EUR{13{,}365}
+    \qquad
+    \mathrm{LTV}_2 = \frac{\EUR{10{,}150}}{\EUR{13{,}365}} = 75.9\%
+    \;>\; 75\%
+\]
+Monitoring flag remains active; no overnight breach ($\mathrm{LTV}^{\text{overnight}}_2 < 75\%$ if
+overnight haircut does not push ACV below threshold).
+
+\paragraph{Step 7 — Day 5: Position Seasoned ($t > T_{\text{liq}}$), Price stable at \EUR{99}.}
+Phase~2 now applies. Initial Margin is no longer binding; Maintenance Margin governs.
+\[
+    \mathrm{LTV}_5 = \frac{\EUR{10{,}150}}{\EUR{13{,}365}} = 75.9\%
+    \;>\; 75\%
+    \quad\Rightarrow\quad \textbf{MM monitoring alert (Phase~2).}
+\]
+Customer must top up collateral or reduce the loan to clear the flag.
+
+\bigskip
+
+\paragraph{Summary.}
+
+\begin{tabularx}{\linewidth}{llllll}
+\toprule
+\textbf{Day} & \textbf{Price} & \textbf{VM} & \textbf{Loan} & \textbf{ACV} & \textbf{LTV / Status} \\
+\midrule
+$t=0$ (open) & \EUR{100} & ---         & \EUR{10{,}000} & \EUR{13{,}500} & $74.1\%$ \quad OK \\
+$t=1$        & \EUR{97}  & $-$\EUR{450} & \EUR{10{,}450} & \EUR{13{,}095} & $79.8\%$ \quad \textit{Monitoring (IM+VM)} \\
+$t=1$ EOD    & \EUR{97}  & ---          & \EUR{10{,}450} & \EUR{12{,}513}$^\dagger$ & $83.5\%$ \quad \textit{Overnight review} \\
+$t=2$        & \EUR{99}  & $+$\EUR{300} & \EUR{10{,}150} & \EUR{13{,}365} & $75.9\%$ \quad \textit{Monitoring} \\
+$t=5+$       & \EUR{99}  & ---          & \EUR{10{,}150} & \EUR{13{,}365} & $75.9\%$ \quad \textit{MM monitoring (Phase~2)} \\
+\bottomrule
+\end{tabularx}
+
+\smallskip
+{\small $^\dagger$Overnight ACV uses $h_{\text{overnight}} = 14\%$.}
+
+% ─────────────────────────────────────────────────────────
+\newpage
+\section*{Appendix: Comparison with Interactive Brokers Margin Framework}
+% ─────────────────────────────────────────────────────────
+
+This appendix applies the Interactive Brokers (IB) margin framework to the identical
+worked example used in the preceding sections — 150~shares at \EUR{100} per share,
+yielding a \EUR{15{,}000} position with \EUR{5{,}000} customer equity and a
+\EUR{10{,}000} loan (3$\times$ leverage) — to facilitate a direct methodological comparison.
+
+% ─────────────────────────────────────────────────────────
+\subsection*{IB Approach A: Regulation T (Reg~T)}
+% ─────────────────────────────────────────────────────────
+
+Reg~T is a flat-rate rule issued by the US Federal Reserve (12~CFR~Part~220) and
+enforced by FINRA Rule~4210. It defines a minimum initial margin of 50\% of the
+purchase price for long equity positions, irrespective of the actual risk profile
+of the instrument.
+
+\paragraph{Step 1 — Compute the Reg~T initial margin requirement.}
+\[
+    \mathrm{IM}_{\mathrm{RegT}} = 50\% \times \EUR{15{,}000} = \EUR{7{,}500}
+\]
+
+\paragraph{Step 2 — Assess whether the position can be opened.}
+Customer equity is \EUR{5{,}000}, which is less than the required \EUR{7{,}500}.
+\textbf{The \EUR{15{,}000} position cannot be opened under Reg~T.}
+The same \EUR{5{,}000} of equity permits a maximum position of:
+\[
+    \mathrm{MV}_{\max} = \frac{\EUR{5{,}000}}{50\%} = \EUR{10{,}000}
+    \quad\Longrightarrow\quad 100 \text{ shares at } \EUR{100} \quad (2{\times}\text{ leverage only})
+\]
+
+\paragraph{Step 3 — Adjusted position (maximum under Reg~T).}
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Item} & \textbf{Value} \\
+\midrule
+Shares & 100 \\
+Market value & \EUR{10{,}000} \\
+Loan & \EUR{5{,}000} \\
+Customer equity & \EUR{5{,}000} \\
+Leverage & $2{\times}$ \\
+Reg~T initial margin rate & $50\%$ \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{Step 4 — Maintenance margin requirement (ongoing).}
+FINRA Rule~4210 sets a minimum maintenance margin of 25\% of current market value.
+IB applies this floor without further add-ons for standard large-cap equities:
+\[
+    \mathrm{MMR} = 25\% \times \EUR{10{,}000} = \EUR{2{,}500}
+\]
+\[
+    \text{Excess Liquidity} = \text{Equity} - \mathrm{MMR} = \EUR{5{,}000} - \EUR{2{,}500} = \EUR{2{,}500}
+\]
+IB begins forced liquidation when Excess Liquidity drops below zero, without issuing a
+margin call. There is no graduated warning framework.
+
+\paragraph{Step 5 — Compute the auto-liquidation price.}
+Let $m = 0.25$ (maintenance rate), $L = \EUR{5{,}000}$, $N = 100$ shares:
+\[
+    P^{*} = \frac{L}{N \times (1 - m)} = \frac{\EUR{5{,}000}}{100 \times 0.75} = \EUR{66.67}
+\]
+The stock must fall $-33.3\%$ from \EUR{100} before IB triggers auto-liquidation.
+
+\paragraph{Step 6 — IB account panel (at position open).}
+
+\begin{tabularx}{\linewidth}{lll}
+\toprule
+\textbf{IB Field} & \textbf{Formula} & \textbf{Value} \\
+\midrule
+Net Liquidation Value  & Equity                   & \EUR{5{,}000} \\
+Initial Margin Req.    & $50\% \times \mathrm{MV}$ & \EUR{5{,}000} \\
+Maintenance Margin Req.& $25\% \times \mathrm{MV}$ & \EUR{2{,}500} \\
+Available Funds        & Equity $-$ IMR            & \EUR{0} \quad (at limit) \\
+Excess Liquidity       & Equity $-$ MMR            & \EUR{2{,}500} \\
+Cushion                & Excess Liq.\ / NLV        & $50\%$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\subsection*{IB Approach B: Portfolio Margin (PM)}
+% ─────────────────────────────────────────────────────────
+
+Portfolio Margin is available to IB accounts with net liquidation value above
+\$110{,}000 (FINRA Rule~4210(g)). It replaces the flat Reg~T rule with a scenario-based
+engine derived from the OCC's Theoretical Intermarket Margin System (TIMS).
+
+\paragraph{Step 1 — Run the OCC scenario grid.}
+IB applies 31 price-shock scenarios ranging from $-15\%$ to $+15\%$ in 1\% steps,
+combined with implied-volatility shocks of $\pm 75\%$ at each price point.
+For a plain long equity position the dominant scenario is the $-15\%$ price shock:
+\[
+    \text{Scenario loss} = 15\% \times \EUR{15{,}000} = \EUR{2{,}250}
+\]
+
+\paragraph{Step 2 — Apply the single-stock PM floor.}
+FINRA Rule~4210(g) mandates a minimum requirement of 15\% of market value for
+individual equity positions:
+\[
+    \mathrm{PM}_{\mathrm{floor}} = 15\% \times \EUR{15{,}000} = \EUR{2{,}250}
+\]
+\[
+    \mathrm{PM\_req} = \max(\text{scenario loss},\; \mathrm{PM}_{\mathrm{floor}}) = \EUR{2{,}250}
+\]
+
+\paragraph{Step 3 — Assess whether the position can be opened.}
+Customer equity \EUR{5{,}000} $>$ \EUR{2{,}250} required.
+\textbf{The \EUR{15{,}000} position can be opened under PM (3$\times$ leverage is feasible).}
+
+\paragraph{Step 4 — Maximum leverage under PM.}
+\[
+    \text{Max leverage} = \frac{1}{15\%} \approx 6.7{\times}
+    \quad\Longrightarrow\quad
+    \mathrm{MV}_{\max} = \frac{\EUR{5{,}000}}{15\%} = \EUR{33{,}333}
+\]
+
+\paragraph{Step 5 — PM maintenance and liquidation trigger.}
+The scenario grid is re-evaluated continuously throughout the trading day.
+For single equities, the maintenance requirement equals the PM requirement (15\% floor).
+Forced liquidation is triggered when Excess Liquidity (NLV $-$ PM\_req) drops below zero.
+
+% ─────────────────────────────────────────────────────────
+\subsection*{Side-by-Side Comparison}
+% ─────────────────────────────────────────────────────────
+
+The table below compares all three frameworks on the \EUR{15{,}000} worked example.
+Where IB~Reg~T requires an adjusted 2$\times$ position, figures are shown on a
+comparable per-EUR basis.
+
+\begin{tabularx}{\linewidth}{lXXX}
+\toprule
+\textbf{Dimension} & \textbf{IB Reg~T} & \textbf{IB Portfolio Margin} & \textbf{Trade Republic} \\
+\midrule
+Methodology
+  & Flat regulatory rule (50\%)
+  & OCC scenario grid $\pm 15\%$, 31 points
+  & Filtered historical simulation + EWMA volatility scaling \\
+Initial margin (€15,000 position)
+  & \EUR{7{,}500} (50\%)
+  & \EUR{2{,}250} (15\%)
+  & \EUR{1{,}710} (11.4\%) \\
+3$\times$ leverage possible?
+  & \textbf{No} — needs \EUR{7{,}500} equity
+  & \textbf{Yes}
+  & \textbf{Yes} \\
+Max leverage on \EUR{5{,}000} equity
+  & $2{\times}$
+  & $6.7{\times}$
+  & ${\sim}8{\times}$ (LTV-capped at 75\%) \\
+IM rate driver
+  & Regulatory flat rate
+  & Worst-case $\pm 15\%$ scenario + 15\% floor
+  & 99\% RVaR over 5-trading-day horizon \\
+Maintenance trigger
+  & Excess Liquidity $< 0$ (binary)
+  & Excess Liquidity $< 0$ (binary)
+  & LTV $> 90\%$ (liquidation); LTV $> 75\%$ (monitoring) \\
+Graduated warning framework
+  & None
+  & None
+  & Yes — three thresholds (75\% / 80\% / 90\%) \\
+Auto-liquidation price (3$\times$, \EUR{100})
+  & N/A (not permitted)
+  & $P^{*} \approx \EUR{83}$ at 15\% MM
+  & LTV $= 90\%$ $\Rightarrow$ $P^{*} \approx \EUR{74}$ \\
+Concentration add-on
+  & ADV-based escalation (not published)
+  & OCC concentration rules
+  & $h_{\mathrm{conc}} + 5\%$ when weight $> 20\%$ \\
+Liquidation horizon
+  & No explicit horizon
+  & 1-day (intraday scenarios)
+  & 5 trading days \\
+Intraday vs.\ overnight distinction
+  & Yes — overnight reverts to 50\% Reg~T
+  & Yes — overnight PM re-evaluated at 15:50~ET
+  & Yes — overnight haircut add-on applied at EOD \\
+Margin call issued
+  & No — auto-liquidates
+  & No — auto-liquidates
+  & No — auto-liquidates \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+
+\subsection*{Key Observations}
+
+\begin{enumerate}[leftmargin=2em]
+
+\item \textbf{Reg~T is purely rule-based.} The 50\% flat rate bears no relation to the
+      actual volatility or liquidity of the instrument. A low-vol blue-chip and a
+      speculative small-cap receive identical treatment. This blocks 3$\times$ leverage
+      entirely, regardless of the risk profile.
+
+\item \textbf{IB Portfolio Margin is methodologically closest to the Trade Republic
+      framework.} Both apply scenario-based stress tests. IB uses the OCC's fixed
+      $\pm 15\%$ grid; Trade Republic uses filtered historical simulation calibrated
+      to the realised tail of each ISIN over the trailing 750 trading days.
+
+\item \textbf{The Trade Republic IM is lower than the IB PM floor} (11.4\% vs.\ 15\%)
+      because the historical approach captures the actual volatility of the stock rather
+      than applying a fixed 15\% shock. For a low-volatility instrument the TR rate will
+      be materially lower; for a high-volatility instrument it will exceed the IB PM
+      floor.
+
+\item \textbf{The liquidation frameworks differ in gradualism.} IB operates a binary
+      trigger (Excess Liquidity $< 0$ $\Rightarrow$ liquidate). Trade Republic operates
+      a three-level graduated framework (monitoring at 75\%, breach at 80\%, liquidation
+      at 90\%), giving the customer explicit visibility and response time before forced
+      liquidation occurs.
+
+\item \textbf{Both IB and Trade Republic auto-liquidate} without issuing a traditional
+      margin call. The difference is that Trade Republic's monitoring thresholds
+      function as early warnings that a formal margin call framework would otherwise provide.
+
+\end{enumerate}
+
+\end{document}

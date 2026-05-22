@@ -1,0 +1,5 @@
+SELECT
+*
+FROM
+TEAMS_PRD.RISK_FUNCTION_TRANSFORM.trf__risk_function_mrm_book_9800001601_daily_pnl_trades
+LIMIt 10;

@@ -1,0 +1,32 @@
+\contentsline {section}{\numberline {1}Purpose and Scope}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Purpose}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Scope}{2}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Regulatory Context}{2}{subsection.1.3}%
+\contentsline {section}{\numberline {2}Key Definitions and Margin Concepts}{3}{section.2}%
+\contentsline {section}{\numberline {3}Framework Overview}{3}{section.3}%
+\contentsline {section}{\numberline {4}Layer 1: Instrument-by-Instrument Margin (Reg~T Floor)}{4}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Conceptual Basis}{4}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Initial Margin Requirement}{4}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Maintenance Margin Requirement}{5}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Asset-Class Margin Rate Schedule}{5}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Layer 1 Margin Call Trigger}{6}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}FX and Non-EUR Positions}{6}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Layer 2: Portfolio-Level Margin Overlay}{6}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Conceptual Basis}{6}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Portfolio VaR Estimation}{7}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Concentration and Correlation Multiplier}{7}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Regime-Adjusted Portfolio Margin}{8}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Single-Name Cap}{8}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Layer Interaction and Effective Margin Requirement}{8}{section.6}%
+\contentsline {subsection}{\numberline {6.1}The Floor Constraint}{8}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Decomposition of the Effective Margin Requirement}{9}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Link to the LTV Framework}{9}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Margin Call Process}{9}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Trigger Hierarchy}{9}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Cure Mechanisms}{9}{subsection.7.2}%
+\contentsline {section}{\numberline {8}Governance and Validation}{10}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Review Schedule}{10}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Backtesting}{10}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Model Independence and Override}{10}{subsection.8.3}%
+\contentsline {section}{\numberline {A}Notation Summary}{10}{appendix.A}%
+\contentsline {section}{\numberline {B}Worked Example: Two-Layer Margin Requirement}{11}{appendix.B}%

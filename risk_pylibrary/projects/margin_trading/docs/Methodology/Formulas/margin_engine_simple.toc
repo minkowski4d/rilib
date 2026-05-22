@@ -1,0 +1,15 @@
+\contentsline {section}{\numberline {1}Overview}{2}{section.1}%
+\contentsline {section}{\numberline {2}Return Decomposition and Calibration Rationale}{2}{section.2}%
+\contentsline {section}{\numberline {3}GBM Monte Carlo Calibration}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Single-Instrument Simulation (\texttt {\_simulate\_gbm})}{2}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Batch Simulation (\texttt {simulate\_gbm\_batch})}{2}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}VaR Extraction and Rate Calibration (\texttt {\_var\_from\_mc})}{3}{subsection.3.3}%
+\contentsline {section}{\numberline {4}SimplifiedMarginEngine Class}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Constructor}{3}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Method 1: \texttt {calibrate(params)} — Calibrate all three rates}{3}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Method 2: \texttt {check\_opening} — IM phase opening check}{4}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Method 3: \texttt {monitor} — Continuous LTV check}{4}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Method 4: \texttt {liquidation\_price} — Auto-liquidation trigger price}{5}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Method 5: \texttt {position\_summary} — Full one-row summary}{5}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Data Flow}{5}{section.5}%
+\contentsline {section}{\numberline {6}Symbol Reference}{6}{section.6}%

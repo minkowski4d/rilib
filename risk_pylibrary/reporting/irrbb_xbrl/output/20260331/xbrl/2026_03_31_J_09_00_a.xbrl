@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<xbrli:xbrl xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi" xmlns:eba_model="http://www.eba.europa.eu/xbrl/ext/model" xmlns:eba_met="http://www.eba.europa.eu/xbrl/crr/dict/met" xmlns:find="http://www.eurofiling.info/xbrl/ext/filing-indicators" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:eba_BA="http://www.eba.europa.eu/xbrl/crr/dict/dom/BA" xmlns:eba_dim="http://www.eba.europa.eu/xbrl/crr/dict/dim" xmlns:eba_TR="http://www.eba.europa.eu/xbrl/crr/dict/dom/TR" xmlns:eba_PL="http://www.eba.europa.eu/xbrl/crr/dict/dom/PL" xmlns:eba_AP="http://www.eba.europa.eu/xbrl/crr/dict/dom/AP" xmlns:eba_ZZ="http://www.eba.europa.eu/xbrl/crr/dict/dom/ZZ" xmlns:eba_IM="http://www.eba.europa.eu/xbrl/crr/dict/dom/IM" xmlns:eba_MC="http://www.eba.europa.eu/xbrl/crr/dict/dom/MC" xmlns:eba_CS="http://www.eba.europa.eu/xbrl/crr/dict/dom/CS" xmlns:eba_CU="http://www.eba.europa.eu/xbrl/crr/dict/dom/CU" xmlns:eba_CT="http://www.eba.europa.eu/xbrl/crr/dict/dom/CT" xmlns:eba_PU="http://www.eba.europa.eu/xbrl/crr/dict/dom/PU" xmlns:eba_LQ="http://www.eba.europa.eu/xbrl/crr/dict/dom/LQ" xmlns:eba_RF="http://www.eba.europa.eu/xbrl/crr/dict/dom/RF" xmlns:eba_TI="http://www.eba.europa.eu/xbrl/crr/dict/dom/TI" xmlns:eba_OF="http://www.eba.europa.eu/xbrl/crr/dict/dom/OF" xmlns:eba_PI="http://www.eba.europa.eu/xbrl/crr/dict/dom/PI" xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <link:schemaRef xlink:type="simple" xlink:href="http://www.eba.europa.eu/eu/fr/xbrl/crr/fws/irrbb/its-2023-03/2024-02-29/mod/irrbb.xsd"/>
+  <xbrli:unit id="uPURE">
+    <xbrli:measure>xbrli:pure</xbrli:measure>
+  </xbrli:unit>
+  <xbrli:unit id="uEUR">
+    <xbrli:measure>iso4217:EUR</xbrli:measure>
+  </xbrli:unit>
+  <xbrli:context id="c1">
+    <xbrli:entity>
+      <xbrli:identifier scheme="https://eurofiling.info/eu/rs">5299009IFX1XTKDY4568.IND</xbrli:identifier>
+    </xbrli:entity>
+    <xbrli:period>
+      <xbrli:instant>2026-03-31</xbrli:instant>
+    </xbrli:period>
+  </xbrli:context>
+  <find:fIndicators>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_01.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_02.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_03.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_04.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_05.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_06.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_07.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_08.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="true">J_09.00</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_10.01</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_10.02</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_11.01</find:filingIndicator>
+    <find:filingIndicator contextRef="c1" find:filed="false">J_11.02</find:filingIndicator>
+  </find:fIndicators>
+</xbrli:xbrl>

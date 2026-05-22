@@ -1,0 +1,217 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{GJR-GARCH(1,1,1) Model}\\[4pt]
+\large Portfolio VaR Engine --- Model Documentation}
+\author{Risk Modelling --- Trade Republic}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+The GJR-GARCH model (Glosten, Jagannathan, and Runkle, 1993) extends the
+standard GARCH(1,1) specification with an asymmetric term that allows
+negative return shocks to have a larger impact on future volatility than
+positive shocks of the same magnitude --- the so-called \textit{leverage
+effect}. This is especially relevant for equity portfolios.
+
+\textbf{Engine key:} \texttt{'gjr'} \\
+\textbf{Sources:}
+\begin{itemize}
+  \item \texttt{risk\_models/garch\_models.py}, lines 38--54 (\texttt{garch\_gjr})
+  \item \texttt{risk\_models/garch\_models.py}, lines 58--131 (\texttt{calculate\_vaR\_garch})
+  \item \texttt{risk\_analytics/risk\_engines.py}, lines 135--152 (engine dispatch)
+\end{itemize}
+\textbf{Library:} \texttt{arch} (Kevin Sheppard)
+
+%-----------------------------------------------------------------------
+\section{Volatility Model}
+
+\subsection{GJR-GARCH(1,1,1) Specification}
+
+Let $r_t$ denote the portfolio return at time $t$. The model assumes:
+\begin{equation}
+r_t = \mu + \varepsilon_t, \qquad \varepsilon_t = \sigma_t z_t,
+\qquad z_t \overset{i.i.d.}{\sim} D(0,1)
+\end{equation}
+where $D(0,1)$ is a standardised distribution (Normal or Student-$t$),
+and $\sigma_t^2$ follows:
+\begin{equation}
+\sigma_t^2 = \omega
+  + \alpha \, \varepsilon_{t-1}^2
+  + \gamma \, \varepsilon_{t-1}^2 \, \mathbb{1}_{\{\varepsilon_{t-1} < 0\}}
+  + \beta \, \sigma_{t-1}^2
+\label{eq:gjr}
+\end{equation}
+
+\begin{itemize}
+  \item $\omega > 0$: long-run variance intercept
+  \item $\alpha \geq 0$: ARCH effect (symmetric impact of shocks)
+  \item $\gamma \geq 0$: asymmetry coefficient (leverage effect;
+        positive shocks have impact $\alpha$, negative shocks have
+        impact $\alpha + \gamma$)
+  \item $\beta \geq 0$: GARCH persistence
+  \item Stationarity requires: $\alpha + \tfrac{1}{2}\gamma + \beta < 1$
+\end{itemize}
+
+\subsection{ARCH library call}
+
+The model is fitted via:
+\begin{lstlisting}[language=Python]
+arch_model(rets_rescaled, p=1, q=1, o=1, vol='GARCH', dist=dist)
+\end{lstlisting}
+where \texttt{o=1} adds the single asymmetric (GJR) term,
+\texttt{p=1} is the GARCH lag order, and \texttt{q=1} is the ARCH lag order.
+Returns are rescaled by a factor (default 1000) before fitting for
+numerical stability.
+
+\subsection{EWMA Pre-weighting (optional)}
+
+Before fitting, an optional EWMA decay can be applied to down-weight
+older observations:
+\begin{equation}
+\tilde{r}_t = \text{EWMA}_\lambda(r_t), \qquad \lambda \in (0,1]
+\end{equation}
+With $\lambda = 1$ (default for GARCH engines) no decay is applied.
+
+%-----------------------------------------------------------------------
+\section{VaR and CVaR Calculation}
+
+\subsection{One-Step Forecast}
+
+After fitting, a one-step-ahead forecast of conditional mean and variance
+is generated using \texttt{ARCHModelResult.forecast()}:
+\begin{equation}
+\hat{\mu}_{t+1} = \hat{\mu}, \qquad \hat{\sigma}_{t+1}^2 = \text{forecast variance}
+\end{equation}
+The forecast uses 1000 simulations internally for the variance path
+(\texttt{simulations=1000}).
+
+\subsection{Parametric VaR (without FHS)}
+
+\textbf{Value-at-Risk:}
+\begin{equation}
+\widehat{\text{VaR}}_\alpha
+= -\hat{\mu}_{t+1} + \hat{\sigma}_{t+1} \cdot q_\alpha^D
+\label{eq:gjr_var}
+\end{equation}
+where $q_\alpha^D$ is the $\alpha$-quantile of the fitted distribution $D$.
+
+For Normal innovations: $q_\alpha^N = \Phi^{-1}(\alpha) < 0$. \\
+For Student-$t$ innovations: $q_\alpha^t = t^{-1}(\alpha; \hat{\nu}) < 0$.
+
+\textbf{CVaR --- Normal distribution:}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{\text{N}}
+= -\hat{\mu}_{t+1} + \hat{\sigma}_{t+1} \cdot
+  \frac{\phi\!\left(\Phi^{-1}(\alpha)\right)}{\alpha}
+\label{eq:gjr_cvar_norm}
+\end{equation}
+
+\textbf{CVaR --- Student-$t$ distribution:}
+\begin{equation}
+\widehat{\text{CVaR}}_\alpha^{t}
+= -\hat{\mu}_{t+1}
+  - \frac{\hat{\sigma}_{t+1}}{\alpha(1 - \hat{\nu})}
+    \Bigl(\hat{\nu} - 2 + \bigl[t^{-1}(\alpha;\hat{\nu})\bigr]^2\Bigr)
+    \cdot f_t\!\bigl(t^{-1}(\alpha;\hat{\nu});\hat{\nu}\bigr)
+\label{eq:gjr_cvar_t}
+\end{equation}
+where $\hat{\nu}$ is the MLE-estimated degrees-of-freedom, $t^{-1}(\alpha;\nu)$
+is the Student-$t$ quantile function, and $f_t(\cdot;\nu)$ is its PDF.
+
+\subsection{Filtered Historical Simulation (FHS)}
+
+When \texttt{fhs=True}, the parametric distribution is replaced by the
+empirical distribution of standardised residuals:
+\begin{equation}
+\hat{z}_t = \frac{r_t - \hat{\mu}}{\hat{\sigma}_t}
+\end{equation}
+VaR quantiles are then taken from the empirical distribution of $\{\hat{z}_t\}$:
+\begin{equation}
+q_\alpha^{\text{FHS}} = Q_{1-\alpha}\!\left(\{\hat{z}_t\}\right)
+\end{equation}
+(Note: the upper tail quantile $Q_{1-\alpha}$ is used to match the sign
+convention for losses.)
+
+FHS retains empirical tail behaviour while using GARCH-filtered volatility,
+combining the strengths of both parametric and non-parametric approaches.
+
+\subsection{Holding-Period Scaling}
+
+\begin{equation}
+\widehat{\text{VaR}}_\alpha^{(H)} = \widehat{\text{VaR}}_\alpha^{(1)} \cdot \sqrt{H}
+\end{equation}
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Default & Description \\
+\midrule
+\texttt{window}   & int   & 250   & Lookback window \\
+\texttt{rescale}  & float & 1000  & Rescaling factor for returns (numerical stability) \\
+\texttt{decay}    & float & 1     & EWMA pre-weighting ($\lambda=1$: no decay) \\
+\texttt{ftol}     & float & 1e-6  & Optimizer convergence tolerance \\
+\texttt{max\_iter}& int   & 150   & Maximum optimizer iterations \\
+\texttt{fhs}      & bool  & False & Use Filtered Historical Simulation \\
+\texttt{distr}    & str   & \texttt{'Normal'} & Innovation distribution: \texttt{'Normal'} or \texttt{'t'} \\
+\texttt{qtls}     & list  & [0.05, 0.01, 0.001] & Tail probability levels \\
+\texttt{holding\_period} & int & 1 & Forecast horizon in days \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{6cm} p{8cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+Captures volatility clustering & Computationally heavier than EWMA/HS \\
+Models leverage effect explicitly & Requires sufficient history for MLE convergence \\
+Parametric tail estimation & Stationarity constraints may bind \\
+FHS option for non-parametric tails & Square-root scaling is approximate \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_analytics import risk_engines as re
+
+var_gjr = re.portfolio_vaR(
+    rets_orig  = rets,
+    wgts       = weights,
+    engine     = 'gjr',
+    fmt_engine = {
+        'window'         : 250,
+        'rescale'        : 1000,
+        'decay'          : 1,
+        'ftol'           : 1e-6,
+        'max_iter'       : 150,
+        'fhs'            : False,
+        'distr'          : 't',
+        'qtls'           : [0.05, 0.01, 0.001],
+        'holding_period' : 1,
+    }
+)
+\end{lstlisting}
+
+%-----------------------------------------------------------------------
+\section{References}
+
+Glosten, L.R., Jagannathan, R., and Runkle, D.E. (1993).
+\textit{On the Relation between the Expected Value and the Volatility of
+the Nominal Excess Return on Stocks.}
+Journal of Finance, 48(5), 1779--1801.
+
+\end{document}

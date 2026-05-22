@@ -1,0 +1,925 @@
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{bbm}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[round]{natbib}
+
+% ── Colours ───────────────────────────────────────────────────────────────────
+\definecolor{darkblue}{RGB}{0,51,102}
+\definecolor{midblue}{RGB}{0,102,179}
+\definecolor{lightgray}{RGB}{245,245,245}
+
+% ── Hyperref setup ────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=darkblue,
+    urlcolor=midblue,
+    citecolor=darkblue,
+    pdfauthor={Risk Management},
+    pdftitle={Loan-to-Value Methodology for Margin Trading}
+}
+
+% ── Header / Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{darkblue}{\small LTV Methodology v1.0}}
+\lhead{\textcolor{darkblue}{\small Confidential}}
+\cfoot{\thepage}
+
+% ── Section formatting ────────────────────────────────────────────────────────
+\titleformat{\section}{\large\bfseries\color{darkblue}}{{\thesection}}{1em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{midblue}}{\thesubsection}{1em}{}
+
+% ── Theorem environments ──────────────────────────────────────────────────────
+\newtheorem{definition}{Definition}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{remark}{Remark}[section]
+
+% ── Custom commands ───────────────────────────────────────────────────────────
+\newcommand{\LTV}{\mathrm{LTV}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\1}{\mathbbm{1}}
+\newcommand{\VaR}{\mathrm{VaR}}
+\newcommand{\CVaR}{\mathrm{CVaR}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}\\[0.4cm]
+    {\Huge\bfseries\color{darkblue} Loan-to-Value Methodology\\[0.3cm]
+    for Margin Trading}\\[0.4cm]
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}\\[2cm]
+
+    {\large\textbf{Version:} 1.0}\\[0.3cm]
+    {\large\textbf{Classification:} Confidential}\\[0.3cm]
+    {\large\textbf{Owner:} Risk Management / Quantitative Risk}\\[0.3cm]
+    {\large\textbf{Date:} \today}\\[3cm]
+
+    \begin{abstract}
+    \noindent
+    This document defines the quantitative methodology governing the calculation,
+    monitoring, and enforcement of Loan-to-Value (LTV) ratios within the margin
+    trading product. It serves as the contractual and operational reference between
+    the Platform and the external Lender, covering collateral eligibility, haircut
+    derivation, LTV computation, threshold calibration, dynamic regime adjustment,
+    margin call procedures, forced liquidation logic, stress testing, and governance.
+    The framework is designed to be mathematically rigorous, operationally
+    transparent, and aligned with applicable regulatory standards (MiFID~II,
+    CRR~II, ESMA leverage guidelines).
+    \end{abstract}
+
+    \vfill
+    {\small\color{gray} This document is confidential and intended solely for use
+    by authorised personnel of the Platform and the Lender. Reproduction or
+    distribution without written consent is prohibited.}
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Purpose and Scope}
+\label{sec:scope}
+
+\subsection{Purpose}
+This methodology document establishes the quantitative framework governing
+Loan-to-Value (LTV) ratios for the margin trading product offered by the Platform.
+It provides a single authoritative reference for:
+\begin{itemize}[leftmargin=1.5em]
+    \item the mathematical definition and computation of LTV;
+    \item the derivation of collateral haircuts using risk-based methods;
+    \item dynamic threshold adjustment under changing market regimes;
+    \item margin call and forced liquidation procedures;
+    \item stress testing and scenario analysis of the collateral portfolio;
+    \item governance, backtesting, and model validation requirements.
+\end{itemize}
+
+\subsection{Scope}
+This methodology applies to all margin loans extended to retail and professional
+clients, all collateral held in segregated custody accounts, and all lifecycle
+events affecting the loan balance or collateral portfolio. It does \emph{not} cover
+unsecured lending, short-selling margin requirements, or derivatives margining.
+
+\subsection{Regulatory Context}
+The framework is aligned with:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{MiFID II / MiFIR} -- suitability and leverage requirements;
+    \item \textbf{CRR II / Basel III} -- Financial Collateral Comprehensive Method (FCCM) for haircut recognition;
+    \item \textbf{ESMA Guidelines on Leverage} -- retail client leverage caps by asset class;
+    \item \textbf{EMIR} -- where collateral overlaps with derivative positions.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Definitions}
+\label{sec:definitions}
+
+\begin{definition}[Loan Amount]
+The loan amount at time $t$ is denoted $L_t$ and comprises outstanding principal
+plus accrued interest.
+\end{definition}
+
+\begin{definition}[Gross Market Value]
+The gross market value of the collateral portfolio at time $t$ is
+\[
+V_t^{\mathrm{gross}} = \sum_{i=1}^{N} P_{i,t}\,Q_i,
+\]
+where $P_{i,t}$ is the last traded price of asset $i$ and $Q_i$ is the quantity held.
+\end{definition}
+
+\begin{definition}[Adjusted Collateral Value]
+The adjusted collateral value $V_t^{\mathrm{adj}}$ is the gross market value
+after application of per-asset haircuts, concentration caps, and a
+portfolio-level correlation adjustment (defined in Section~\ref{sec:collateral}).
+\end{definition}
+
+\begin{definition}[Loan-to-Value Ratio]
+\[
+\LTV_t \;=\; \frac{L_t}{V_t^{\mathrm{adj}}}
+\]
+\end{definition}
+
+\begin{definition}[Haircut]
+The haircut $h_i \in [0,1)$ for asset $i$ is the proportional reduction applied to
+its market value to derive its eligible collateral contribution, reflecting
+liquidation risk.
+\end{definition}
+
+\begin{definition}[Concentration Adjustment]
+A portfolio-level multiplicative factor $\kappa_t \in [0,1)$ applied to
+$V_t^{\mathrm{adj}}$ to penalise undiversified or highly correlated collateral
+portfolios.
+\end{definition}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Collateral Eligibility and Haircut Framework}
+\label{sec:collateral}
+
+\subsection{Eligibility Criteria}
+An asset qualifies as eligible collateral if and only if it satisfies \emph{all}
+of the following criteria simultaneously:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Listing:} Traded on a recognised exchange (EU regulated market
+    or equivalent third-country venue).
+    \item \textbf{Liquidity:} 30-day average daily traded value (ADTV)
+    $\geq \EUR{500{,}000}$.
+    \item \textbf{Price Availability:} End-of-day and intraday prices available
+    from a primary source and at least one independent fallback.
+    \item \textbf{Instrument Type:} Equities, broad-market ETFs, government bonds,
+    investment-grade corporate bonds. Explicitly excluded: structured products,
+    leveraged/inverse ETFs, unlisted securities, crypto-assets.
+    \item \textbf{Jurisdiction:} Issuer domiciled or listed in EEA, US, UK,
+    Switzerland, Japan, Australia, or Canada.
+\end{enumerate}
+
+\subsection{Risk-Based Haircut Derivation}
+\label{subsec:haircut}
+
+Haircuts are designed to absorb the potential mark-to-market loss over the
+liquidation horizon with high probability. The base haircut for asset $i$ is
+derived as the Value-at-Risk of a long position over a holding period $\Delta t$:
+
+\begin{equation}
+    h_i \;=\; 1 - \frac{1}{1 + r_f\,\Delta t}\,
+    \exp\!\left(-\,z_\alpha\,\hat{\sigma}_i\,\sqrt{\Delta t}\right),
+    \label{eq:haircut}
+\end{equation}
+
+where:
+\begin{itemize}[leftmargin=1.5em]
+    \item $\hat{\sigma}_i$ -- annualised return volatility of asset $i$, estimated
+    via an EWMA model with decay factor $\lambda = 0.94$ over a 252-day window:
+    \[
+    \hat{\sigma}_i^2 = (1-\lambda)\sum_{k=0}^{T-1}\lambda^k r_{i,t-k}^2,
+    \]
+    with daily log-returns $r_{i,t} = \ln(P_{i,t}/P_{i,t-1})$;
+    \item $\Delta t = 5/252$ -- assumed liquidation horizon of five trading days;
+    \item $z_\alpha = \Phi^{-1}(\alpha)$ -- standard normal quantile at confidence
+    level $\alpha = 99\%$, i.e.\ $z_{0.99} = 2.326$;
+    \item $r_f$ -- ECB deposit facility rate (annualised).
+\end{itemize}
+
+\begin{remark}
+    For assets with fat-tailed return distributions, the Normal quantile may
+    underestimate tail risk. A Cornish--Fisher expansion can be applied:
+    \[
+    z_\alpha^{CF} = z_\alpha + \frac{z_\alpha^2 - 1}{6}\,\hat{\gamma}_1
+    + \frac{z_\alpha^3 - 3z_\alpha}{24}\,\hat{\gamma}_2
+    - \frac{2z_\alpha^3 - 5z_\alpha}{36}\,\hat{\gamma}_1^2,
+    \]
+    where $\hat{\gamma}_1$ and $\hat{\gamma}_2$ are the estimated skewness and
+    excess kurtosis of the return series.
+\end{remark}
+
+\subsubsection*{Liquidity-Adjusted Haircut}
+
+An additional bid-ask spread adjustment is applied for assets with elevated
+transaction costs:
+\begin{equation}
+    h_i^{\mathrm{liq}} = h_i + \max\!\left(0,\;\frac{s_i - s^*}{2}\right),
+    \label{eq:liq_haircut}
+\end{equation}
+where $s_i$ is the observed time-weighted average bid-ask spread and $s^* =
+0.10\%$ is the reference spread for liquid large-cap equities.
+
+\subsubsection*{Indicative Haircut Table}
+
+Table~\ref{tab:haircuts} presents the operationally applied haircut schedule,
+derived from equation~\eqref{eq:haircut} and reviewed quarterly.
+
+\begin{table}[H]
+\centering
+\caption{Indicative Haircut Schedule by Asset Class}
+\label{tab:haircuts}
+\begin{tabular}{llr}
+\toprule
+\textbf{Asset Class} & \textbf{Subcategory} & \textbf{Base Haircut $h_i$} \\
+\midrule
+Government Bonds & AAA--AA, maturity $< 1$Y     & 0.5\% \\
+                 & AAA--AA, 1--5Y                & 2.0\% \\
+                 & AAA--AA, 5--10Y               & 4.0\% \\
+                 & A--BBB, any maturity          & 6--12\% \\
+IG Corporate Bonds & 0--5Y                       & 8.0\% \\
+                   & 5Y+                         & 12.0\% \\
+Large-Cap Equities & MSCI World, ADTV $> \EUR{5M}$ & 20.0\% \\
+Mid-Cap Equities   & ADTV $\EUR{500K}$--$\EUR{5M}$ & 30.0\% \\
+Small-Cap Equities & ADTV $< \EUR{500K}$ (min)   & 40.0\% \\
+ETFs (broad)       & Major index replication     & 20.0\% \\
+ETFs (thematic)    & Sector/factor exposure      & 30.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Concentration Limits and Portfolio Adjustment}
+
+\subsubsection*{Single-Name Cap}
+The eligible collateral value attributed to any single issuer is capped at 20\%
+of the unadjusted collateral value. Let $w_i = P_{i,t}Q_i(1-h_i) /
+\sum_j P_{j,t}Q_j(1-h_j)$ be the weight of issuer $i$. The concentration-adjusted
+contribution is:
+\[
+C_i = P_{i,t}\,Q_i\,(1 - h_i) \cdot \min\!\left(1,\;\frac{0.20}{w_i}\right).
+\]
+
+\subsubsection*{Portfolio Correlation Adjustment}
+Let $\bar{\rho}_t$ denote the average pairwise Pearson correlation of daily
+log-returns across all collateral positions, estimated over a 60-day rolling window.
+The correlation adjustment is:
+\begin{equation}
+    \kappa(\bar{\rho}_t) =
+    \begin{cases}
+        0 & \bar{\rho}_t \leq 0.4 \\[4pt]
+        0.05\cdot\dfrac{\bar{\rho}_t - 0.4}{0.6} & 0.4 < \bar{\rho}_t \leq 1
+    \end{cases}
+    \label{eq:kappa}
+\end{equation}
+This adjustment linearly ramps from 0\% to 5\% as average pairwise correlation
+rises from 0.4 to 1.0, reflecting the reduced diversification benefit in stress.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{LTV Calculation Methodology}
+\label{sec:ltv_calc}
+
+\subsection{Core LTV Formula}
+
+The adjusted collateral value incorporating all adjustments is:
+\begin{equation}
+    V_t^{\mathrm{adj}} = \bigl(1 - \kappa(\bar{\rho}_t)\bigr)
+    \sum_{i=1}^{N} C_i(t),
+    \label{eq:Vadj}
+\end{equation}
+and the LTV is:
+\begin{equation}
+    \LTV_t = \frac{L_t}{V_t^{\mathrm{adj}}}.
+    \label{eq:ltv}
+\end{equation}
+
+\subsection{Loan Balance Dynamics}
+
+The loan balance accrues continuously at the margin lending rate $r_m$
+(floating: EURIBOR 3M + contractual spread), reduced by any client repayments:
+\begin{equation}
+    L_t = L_0\,e^{r_m t} - \sum_{k:\,t_k \leq t} R_k\,e^{r_m(t - t_k)},
+    \label{eq:loan}
+\end{equation}
+where $R_k$ is the repayment made at time $t_k$.
+
+\subsection{Calculation Frequency and Price Sources}
+
+\begin{table}[H]
+\centering
+\caption{LTV Calculation Schedule}
+\begin{tabular}{lll}
+\toprule
+\textbf{Calculation} & \textbf{Frequency} & \textbf{Trigger} \\
+\midrule
+Real-time LTV    & Continuous (tick)          & Any price update \\
+Intraday Snap    & Every 15 min (market hrs)  & Scheduled \\
+End-of-Day LTV   & Once, post close           & Official close prices \\
+Stress LTV       & Daily, post close          & Scheduled \\
+Regime LTV       & Daily, pre-open            & Regime classification \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Price source hierarchy:}
+\begin{enumerate}[leftmargin=1.5em]
+    \item Primary: Exchange last-traded price (real-time feed).
+    \item Fallback 1: Bloomberg/Refinitiv composite.
+    \item Fallback 2: Prior closing price with an additional 5\% liquidity haircut.
+    \item If no valid price for $>2$ consecutive trading days: zero collateral value.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Dynamic Threshold Adjustment}
+\label{sec:dynamic}
+
+\subsection{Motivation}
+
+Static LTV thresholds calibrated under average market conditions may be
+insufficient during periods of elevated volatility or structural regime change.
+A dynamic threshold framework adjusts the warning and liquidation LTVs in
+real time, ensuring that the probability of the loan becoming uncovered remains
+below the target tolerance $p^*$ under all market regimes.
+
+\subsection{Volatility Regime Classification}
+\label{subsec:regime}
+
+Market regime is classified daily using a two-state Hidden Markov Model (HMM)
+estimated on the VSTOXX index (or CBOE VIX for US-dominated portfolios).
+Let the latent state $S_t \in \{0, 1\}$ denote \emph{normal} and \emph{stress}
+regimes respectively. The observation equation is:
+\[
+x_t = \mu_{S_t} + \sigma_{S_t}\,\varepsilon_t, \qquad \varepsilon_t \sim \mathcal{N}(0,1),
+\]
+where $x_t = \ln(\text{VSTOXX}_t)$ and the parameters
+$\Theta = \{\mu_0, \sigma_0, \mu_1, \sigma_1, p_{00}, p_{11}\}$ are estimated
+via the Baum--Welch (EM) algorithm.
+
+The smoothed state probability is:
+\[
+\pi_t^{(1)} = \Prob(S_t = 1 \mid x_{1:t};\,\hat{\Theta}),
+\]
+computed via the forward--backward algorithm.
+
+In practice, a simpler but robust \textbf{three-regime classification} based on
+realised volatility percentiles is operationally preferred:
+
+\begin{table}[H]
+\centering
+\caption{Volatility Regime Classification}
+\label{tab:regime}
+\begin{tabular}{llll}
+\toprule
+\textbf{Regime} & \textbf{Condition} & \textbf{VSTOXX Level} & \textbf{Label} \\
+\midrule
+Normal  & $\sigma_{p,5d} \leq \bar{\sigma}_p + 1\hat{s}$ & $<$ 20 & \textsc{Normal} \\
+Elevated & $\bar{\sigma}_p + 1\hat{s} < \sigma_{p,5d} \leq \bar{\sigma}_p + 2\hat{s}$ & 20--30 & \textsc{Elevated} \\
+Stress  & $\sigma_{p,5d} > \bar{\sigma}_p + 2\hat{s}$ & $>$ 30 & \textsc{Stress} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent where $\sigma_{p,5d}$ is the 5-day realised portfolio volatility,
+$\bar{\sigma}_p$ is the long-run mean, and $\hat{s}$ is the long-run standard
+deviation of 5-day realised volatility, both estimated over a 2-year rolling window.
+
+\subsection{Dynamic Threshold Formula}
+
+The regime-adjusted liquidation threshold is defined such that:
+\begin{equation}
+    \Prob\!\left(\Delta V_t > V_t^{\mathrm{adj}}\bigl(1 - \LTV^{\mathrm{liq}}_t\bigr)\right) \leq p^*,
+    \label{eq:threshold_condition}
+\end{equation}
+which, under a Normal approximation with portfolio volatility $\hat{\sigma}_{p,t}$
+and liquidation horizon $\Delta t$, yields:
+
+\begin{equation}
+    \LTV^{\mathrm{liq}}_t = 1 - z_{1-p^*}\,\hat{\sigma}_{p,t}\,\sqrt{\Delta t},
+    \label{eq:dynamic_liq}
+\end{equation}
+
+where $\hat{\sigma}_{p,t}$ is updated daily. To avoid excessive threshold
+oscillation, the dynamic threshold is smoothed via an exponential moving average
+with half-life $\tau = 5$ trading days:
+
+\begin{equation}
+    \widetilde{\LTV}^{\mathrm{liq}}_t
+    = \beta\,\LTV^{\mathrm{liq}}_t + (1-\beta)\,\widetilde{\LTV}^{\mathrm{liq}}_{t-1},
+    \qquad \beta = 1 - e^{-\ln 2 / \tau}.
+    \label{eq:threshold_smooth}
+\end{equation}
+
+Hard floors and ceilings are applied to ensure operational bounds:
+\begin{equation}
+    \LTV^{\mathrm{liq},\star}_t
+    = \min\!\left(\LTV^{\mathrm{liq},\max},\;
+    \max\!\left(\LTV^{\mathrm{liq},\min},\;
+    \widetilde{\LTV}^{\mathrm{liq}}_t\right)\right).
+    \label{eq:threshold_bounds}
+\end{equation}
+
+\subsection{Regime-Dependent Threshold Schedule}
+
+Table~\ref{tab:thresholds} summarises the operationally applied thresholds across
+regimes, derived from equation~\eqref{eq:dynamic_liq} for a representative
+diversified equity portfolio ($p^* = 0.1\%$):
+
+\begin{table}[H]
+\centering
+\caption{Regime-Dependent LTV Threshold Schedule}
+\label{tab:thresholds}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Regime} & $\hat{\sigma}_{p,t}$ (ann.) & \textbf{Initial LTV} & \textbf{Warning LTV} & \textbf{Liquidation LTV} \\
+\midrule
+Normal   & $\approx 15\%$ & 60\% & 70\% & 80\% \\
+Elevated & $\approx 25\%$ & 55\% & 65\% & 75\% \\
+Stress   & $\approx 40\%$ & 45\% & 55\% & 65\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent In the Stress regime, newly originated loans must satisfy the lower
+Initial LTV. Existing loans are not force-cured solely due to a regime transition,
+but receive an accelerated margin call cure deadline.
+
+\subsection{Asymmetric Regime Transitions}
+
+To avoid threshold whipsawing around regime boundaries, asymmetric persistence
+rules are applied:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Upgrade} (Stress $\to$ Elevated or Normal): requires 5 consecutive
+    trading days in the lower-volatility regime before thresholds are relaxed.
+    \item \textbf{Downgrade} (Normal/Elevated $\to$ Stress): immediate threshold
+    tightening on the day of classification.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Margin Call Process}
+\label{sec:margin_call}
+
+\subsection{Trigger and Notification}
+
+A margin call is triggered when:
+\[
+\LTV_t \geq \LTV^{\mathrm{warn},\star}_t.
+\]
+The notification is issued within 15 minutes of trigger detection and specifies
+the current LTV, the warning threshold, the required cure amount $\Delta$, and the
+cure deadline.
+
+\subsection{Cure Amount Calculation}
+
+The cure target is restoration to the regime-adjusted initial LTV,
+$\LTV^{\mathrm{target}} = \LTV^{\mathrm{init},\star}_t$. Three cure mechanisms
+are available:
+
+\subsubsection*{Option A -- Cash Deposit / Partial Repayment}
+\[
+\Delta^{\mathrm{cash}} = L_t - \LTV^{\mathrm{target}}\cdot V_t^{\mathrm{adj}}.
+\]
+
+\subsubsection*{Option B -- Additional Collateral}
+\[
+\Delta^{\mathrm{collateral}}
+= \frac{L_t - \LTV^{\mathrm{target}}\cdot V_t^{\mathrm{adj}}}
+       {\LTV^{\mathrm{target}}\cdot(1 - h_{\mathrm{new}})},
+\]
+where $h_{\mathrm{new}}$ is the haircut of the newly deposited collateral.
+
+\subsubsection*{Option C -- Partial Position Reduction}
+\[
+\Delta^{\mathrm{reduce}}
+= \frac{L_t - \LTV^{\mathrm{target}}\cdot V_t^{\mathrm{adj}}}
+       {1 - \LTV^{\mathrm{target}}\cdot(1 - h_{\mathrm{sold}})},
+\]
+where $h_{\mathrm{sold}}$ is the haircut of the sold collateral.
+
+\subsection{Cure Period}
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Client Type} & \textbf{Normal Regime} & \textbf{Stress Regime} \\
+\midrule
+Retail       & T+1, 12:00 CET & Same-day, 4 hours \\
+Professional & T+0, 4 hours   & T+0, 2 hours \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Forced Liquidation Process}
+\label{sec:liquidation}
+
+\subsection{Trigger Conditions}
+Forced liquidation is initiated when \emph{any} of the following conditions hold:
+\begin{enumerate}[leftmargin=1.5em]
+    \item $\LTV_t \geq \LTV^{\mathrm{liq},\star}_t$ at any intraday snapshot;
+    \item Cure period expires without sufficient cure action;
+    \item $\LTV_t^{\mathrm{stress}} \geq \LTV^{\mathrm{liq},\star}_t$ on two
+    consecutive business days (pre-emptive trigger).
+\end{enumerate}
+
+\subsection{Liquidation Sequencing}
+
+Positions are ranked by liquidity score:
+\[
+\ell_i = \frac{\mathrm{ADTV}_i}{P_{i,t}\,Q_i},
+\]
+and liquidated in descending order of $\ell_i$. The quantity of asset $i$ to sell is:
+\[
+Q_i^{\mathrm{sell}}
+= \min\!\left(Q_i,\;
+  \frac{\Delta^{\mathrm{reduce}}}{P_{i,t}(1 - s_i/2)}\right),
+\]
+where $s_i/2$ is the estimated half-spread. The algorithm iterates until
+$\LTV_t \leq \LTV^{\mathrm{target}}$.
+
+\subsection{Market Impact Estimation}
+
+For positions where $Q_i^{\mathrm{sell}} / \mathrm{ADTV}_i > 10\%$, market impact
+is estimated using the Almgren--Chriss permanent impact model:
+\begin{equation}
+    MI_i = \eta\,\sigma_i\,\frac{Q_i^{\mathrm{sell}}}{\mathrm{ADTV}_i}\,P_{i,t},
+    \label{eq:market_impact}
+\end{equation}
+where $\eta \in [0.1, 0.3]$ is the market impact coefficient, estimated empirically.
+The total liquidation shortfall estimate is:
+\[
+\mathrm{TIS} = \sum_{i} MI_i + \sum_{i} P_{i,t}\,Q_i^{\mathrm{sell}}\,\frac{s_i}{2}.
+\]
+This shortfall is factored into the target cure amount.
+
+\subsection{Proceeds Waterfall}
+
+Liquidation proceeds are applied in strict priority:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Outstanding loan principal $L_t$;
+    \item Accrued interest;
+    \item Platform liquidation fee;
+    \item Residual returned to client.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stress Testing Framework}
+\label{sec:stress}
+
+\subsection{Overview}
+
+The stress testing framework serves three distinct purposes:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Pre-emptive monitoring:} Daily computation of Stress LTV to
+    detect latent vulnerabilities before mark-to-market LTV breaches thresholds.
+    \item \textbf{Threshold calibration:} Stress scenarios inform the setting of
+    regime-adjusted thresholds (Section~\ref{sec:dynamic}).
+    \item \textbf{Lender capital planning:} Portfolio-level stress results are
+    reported to the Lender for concentration risk and capital adequacy assessment.
+\end{enumerate}
+
+\subsection{Single-Asset Stress LTV}
+
+For each client portfolio, a Stress LTV is computed by applying instantaneous
+shocks $\delta_i$ to all collateral positions:
+
+\begin{equation}
+    V_t^{\mathrm{stress}} = \sum_{i=1}^{N} P_{i,t}\,Q_i\,(1-h_i)\,(1-\delta_i),
+    \qquad
+    \LTV_t^{\mathrm{stress}} = \frac{L_t}{V_t^{\mathrm{stress}}}.
+    \label{eq:stress_ltv}
+\end{equation}
+
+The stress shock $\delta_i$ is defined as:
+\[
+\delta_i = \max\!\left(\delta_i^{\mathrm{hist}},\;\delta_i^{\mathrm{floor}}\right),
+\]
+where:
+\begin{itemize}[leftmargin=1.5em]
+    \item $\delta_i^{\mathrm{hist}}$ is the 99th percentile of the empirical
+    distribution of 5-day absolute log-returns of asset $i$ over a 5-year lookback:
+    \[
+    \delta_i^{\mathrm{hist}} = \widehat{F}_i^{-1}(0.99),\qquad
+    \widehat{F}_i = \text{empirical CDF of }|r_{i,t:t+5\Delta}|;
+    \]
+    \item $\delta_i^{\mathrm{floor}} = 15\%$ for equities, $5\%$ for investment-grade
+    bonds (regulatory floor).
+\end{itemize}
+
+\subsection{Historical Scenario Analysis}
+
+The collateral portfolio is revalued under the following named historical
+stress scenarios, replaying actual observed returns:
+
+\begin{table}[H]
+\centering
+\caption{Named Historical Stress Scenarios}
+\label{tab:scenarios}
+\begin{tabular}{llr}
+\toprule
+\textbf{Scenario} & \textbf{Period} & \textbf{Approx.\ Peak Equity Drawdown} \\
+\midrule
+Global Financial Crisis   & Oct 2008 -- Mar 2009 & $-50\%$ \\
+European Sovereign Crisis & Aug 2011 -- Sep 2011 & $-22\%$ \\
+COVID-19 Shock            & Feb 2020 -- Mar 2020 & $-35\%$ \\
+Rate Shock 2022           & Jan 2022 -- Oct 2022 & $-25\%$ (equities), $-20\%$ (bonds) \\
+Flash Crash               & Aug 24, 2015         & $-11\%$ intraday \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each scenario $s$ with path $\{r_{i,t}^{(s)}\}$, the portfolio trajectory is:
+\[
+V_\tau^{(s)} = \sum_{i=1}^{N} P_{i,0}\,Q_i\,(1-h_i)
+\prod_{t=1}^{\tau}\bigl(1 + r_{i,t}^{(s)}\bigr),
+\qquad \LTV_\tau^{(s)} = \frac{L_\tau}{V_\tau^{(s)}},
+\]
+and the scenario breach indicator is:
+\[
+\mathbbm{1}^{(s)}_{\mathrm{breach}}
+= \max_{\tau}\,\mathbbm{1}\!\left[\LTV_\tau^{(s)} \geq \LTV^{\mathrm{liq},\star}\right].
+\]
+
+\subsection{Hypothetical (Adverse) Scenario Analysis}
+
+In addition to historical replays, the following hypothetical shocks are applied:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Parallel equity drawdown:} All equity positions simultaneously
+    lose $X\%$ over one trading day. $X$ is swept from 10\% to 50\%.
+    \item \textbf{Rates shock:} Instantaneous parallel shift of $+200$bps applied
+    to bond positions (duration-adjusted price impact).
+    \item \textbf{Correlation breakdown:} All pairwise correlations set to 1.0;
+    haircuts are recomputed accordingly and $\kappa = 5\%$ applied.
+    \item \textbf{Liquidity seizure:} All ADTV values reduced by 80\%; haircuts
+    recalculated via equation~\eqref{eq:liq_haircut} with inflated spreads.
+    \item \textbf{FX shock:} Non-EUR assets subject to an additional 15\% adverse
+    currency move.
+\end{enumerate}
+
+\subsection{Reverse Stress Testing}
+\label{subsec:reverse_stress}
+
+Reverse stress testing identifies the minimum market shock $\delta^*$ required
+to breach the liquidation threshold, i.e.\ to make the loan uncovered. This is
+formulated as a constrained optimisation:
+
+\begin{equation}
+    \delta^* = \argmin_{\boldsymbol{\delta}\,\geq\,0}
+    \;\|\boldsymbol{\delta}\|_2
+    \quad\text{s.t.}\quad
+    L_t \;\geq\; V_t^{\mathrm{adj}}\bigl(\boldsymbol{\delta}\bigr),
+    \label{eq:reverse_stress}
+\end{equation}
+where $\|\boldsymbol{\delta}\|_2 = \sqrt{\sum_i \delta_i^2}$ is the Euclidean
+norm of the shock vector and:
+\[
+V_t^{\mathrm{adj}}(\boldsymbol{\delta})
+= \bigl(1 - \kappa\bigr)
+\sum_{i=1}^{N} P_{i,t}\,Q_i\,(1-h_i)\,(1-\delta_i).
+\]
+
+\noindent The closed-form solution, assuming no binding concentration constraints, is:
+
+\begin{equation}
+    \delta_i^* = \delta^*_{\mathrm{uniform}}
+    = 1 - \frac{V_t^{\mathrm{adj}}(0)}{L_t / (1-\kappa)}
+    \cdot \frac{1}{N},
+    \label{eq:reverse_uniform}
+\end{equation}
+for a uniform shock. For a risk-weighted shock (proportional to volatility):
+\[
+\delta_i^* = \lambda^*\,\sigma_i,
+\qquad
+\lambda^* = \frac{V_t^{\mathrm{adj}}(0) - L_t/(1-\kappa)}
+                 {\sum_j P_{j,t}\,Q_j\,(1-h_j)\,\sigma_j}.
+\]
+The reverse stress result $\delta^*$ is reported alongside each daily
+Stress LTV as a margin of safety metric.
+
+\subsection{Portfolio-Level VaR and CVaR of LTV}
+
+For the purpose of Lender reporting, a distribution of $\LTV_{t+\Delta t}$ is
+estimated via Monte Carlo simulation:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item Draw $M = 10{,}000$ correlated return scenarios from a multivariate
+    $t$-distribution with estimated covariance $\hat{\Sigma}$ and degrees of
+    freedom $\nu$ (fitted via maximum likelihood):
+    \[
+    \mathbf{r}_{t+\Delta t}^{(m)} \sim t_\nu(\mathbf{0},\,\hat{\Sigma}\,\Delta t),
+    \qquad m = 1,\ldots,M.
+    \]
+    \item Revalue the portfolio under each scenario:
+    \[
+    V_{t+\Delta t}^{(m)}
+    = \sum_{i=1}^{N} P_{i,t}\,e^{r_{i,t+\Delta t}^{(m)}}\,Q_i\,(1-h_i).
+    \]
+    \item Compute the simulated LTV:
+    \[
+    \LTV_{t+\Delta t}^{(m)} = \frac{L_{t+\Delta t}}{V_{t+\Delta t}^{(m)}}.
+    \]
+    \item Report:
+    \begin{align*}
+    \VaR_{\alpha}(\LTV) &= \hat{F}_{\LTV}^{-1}(\alpha),\\
+    \CVaR_{\alpha}(\LTV) &= \frac{1}{1-\alpha}\int_\alpha^1 \hat{F}_{\LTV}^{-1}(u)\,du.
+    \end{align*}
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Collateral Revaluation and Corporate Actions}
+\label{sec:corp_actions}
+
+\begin{table}[H]
+\centering
+\caption{Corporate Action Treatment}
+\begin{tabular}{p{3.5cm}p{9cm}}
+\toprule
+\textbf{Event} & \textbf{Treatment} \\
+\midrule
+Cash Dividend      & Ex-date price drop reflected via feed; dividend cash credited and may offset loan \\
+Stock Split        & $Q_i \to k Q_i$, $P_i \to P_i/k$; LTV unchanged if processed correctly \\
+Spin-off           & New entity assessed for eligibility; if ineligible, zero collateral value from ex-date \\
+M\&A (cash)        & Position removed on settlement; proceeds applied to loan \\
+M\&A (stock)       & New shares reassessed; LTV recalculated \\
+Delisting          & Immediate zero collateral value; margin call if $\LTV \geq \LTV^{\mathrm{warn}}$ \\
+Trading Halt       & Fallback price applied; zero value if halt $> 2$ days \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{FX Revaluation}
+For assets denominated in currency $c \neq$ EUR, a combined haircut is applied:
+\[
+h_i^{\mathrm{total}} = 1 - (1-h_i)(1-h_{\mathrm{FX}(c)}),
+\]
+where $h_{\mathrm{FX}(c)}$ is derived from equation~\eqref{eq:haircut} applied
+to the $c$/EUR exchange rate with a 5-day liquidation horizon.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Governance and Validation}
+\label{sec:governance}
+
+\subsection{Backtesting and the Kupiec POF Test}
+
+Haircut adequacy is validated quarterly. For each asset class $j$, the test
+statistic is:
+\begin{equation}
+    LR_{\mathrm{POF}}^{(j)}
+    = -2\ln\!\left[
+        \frac{(1-p)^{T-x}\,p^x}{(1-\hat{p})^{T-x}\,\hat{p}^x}
+    \right] \;\xrightarrow{d}\; \chi^2(1),
+    \label{eq:kupiec}
+\end{equation}
+where $p$ is the target exceedance rate ($p = 1\%$ for $\alpha = 99\%$),
+$T$ is the sample size, $x$ is the number of observed haircut breaches, and
+$\hat{p} = x/T$. Haircuts are flagged for revision if $LR > \chi^2_{0.95}(1) = 3.84$.
+
+Additionally, the Christoffersen conditional coverage test is applied to assess
+independence of exceedances:
+\[
+LR_{\mathrm{CC}} = LR_{\mathrm{POF}} + LR_{\mathrm{ind}} \;\sim\; \chi^2(2).
+\]
+
+\subsection{Review Schedule}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Activity} & \textbf{Frequency} \\
+\midrule
+Haircut backtesting (Kupiec + Christoffersen) & Quarterly \\
+Regime model recalibration (HMM)             & Semi-annual \\
+Threshold calibration review                 & Quarterly \\
+Stress scenario update                       & Annual (or post-crisis) \\
+Full methodology review                      & Annual \\
+Lender portfolio LTV report                  & Daily \\
+Lender stress report                         & Weekly \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\appendix
+
+\section{Notation Summary}
+\label{app:notation}
+
+\begin{longtable}{cl}
+\toprule
+\textbf{Symbol} & \textbf{Description} \\
+\midrule
+\endhead
+$L_t$                        & Loan amount at time $t$ \\
+$V_t^{\mathrm{gross}}$       & Gross market value of collateral at $t$ \\
+$V_t^{\mathrm{adj}}$         & Adjusted collateral value at $t$ \\
+$V_t^{\mathrm{stress}}$      & Stressed collateral value at $t$ \\
+$P_{i,t}$                    & Price of asset $i$ at $t$ \\
+$Q_i$                        & Quantity held of asset $i$ \\
+$h_i$                        & Haircut for asset $i$ \\
+$h_i^{\mathrm{liq}}$         & Liquidity-adjusted haircut for asset $i$ \\
+$h_{\mathrm{FX}(c)}$         & FX haircut for currency $c$ \\
+$\hat{\sigma}_i$             & EWMA annualised volatility of asset $i$ \\
+$\hat{\sigma}_{p,t}$         & Portfolio volatility at $t$ \\
+$\bar{\rho}_t$               & Average pairwise correlation at $t$ \\
+$\kappa(\bar{\rho}_t)$       & Portfolio correlation adjustment \\
+$S_t$                        & Volatility regime state at $t$ \\
+$\pi_t^{(1)}$                & Smoothed stress-regime probability \\
+$\delta_i$                   & Stress shock for asset $i$ \\
+$\delta^*$                   & Reverse stress break-even shock \\
+$\ell_i$                     & Liquidity score of asset $i$ \\
+$r_m$                        & Margin loan rate \\
+$r_f$                        & Risk-free rate \\
+$\Delta t$                   & Liquidation horizon (years) \\
+$z_\alpha$                   & Standard normal quantile at level $\alpha$ \\
+$\lambda$                    & EWMA decay factor \\
+$\eta$                       & Almgren--Chriss impact coefficient \\
+$p^*$                        & Target loss probability tolerance \\
+$\LTV^{\mathrm{init}}$       & Maximum initial LTV \\
+$\LTV^{\mathrm{warn}}$       & Warning LTV threshold \\
+$\LTV^{\mathrm{liq}}$        & Liquidation LTV threshold \\
+$\LTV^{\mathrm{liq},\star}_t$& Dynamic (regime-adjusted) liquidation threshold \\
+\bottomrule
+\end{longtable}
+
+\section{Worked Example: Dynamic Threshold and Stress LTV}
+\label{app:example}
+
+\subsection*{Portfolio}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item 1,000 shares large-cap equity: $P = \EUR{80}$, $h = 20\%$, $\sigma = 18\%$ p.a.
+    \item \EUR{20,000} nominal 3Y AA government bond: price 101\%, $h = 2\%$, $\sigma = 3\%$ p.a.
+    \item 500 shares mid-cap equity: $P = \EUR{40}$, $h = 30\%$, $\sigma = 28\%$ p.a.
+\end{itemize}
+
+\[
+V^{\mathrm{adj}} = 64{,}000 + 19{,}796 + 14{,}000 = \EUR{97{,}796},
+\qquad L = \EUR{55{,}000},
+\qquad \LTV = 56.2\%.
+\]
+
+\subsection*{Portfolio Volatility}
+Assuming correlations $\rho_{12} = 0.05$, $\rho_{13} = 0.60$, $\rho_{23} = 0.05$,
+portfolio weights (by adjusted value) $w_1 = 65.4\%$, $w_2 = 20.2\%$,
+$w_3 = 14.3\%$:
+
+\[
+\hat{\sigma}_p^2 = \mathbf{w}^\top \Sigma \mathbf{w} \approx 0.0256
+\;\Rightarrow\; \hat{\sigma}_p \approx 16.0\%\ \text{p.a.}
+\]
+
+\subsection*{Dynamic Liquidation Threshold (Normal Regime)}
+\[
+\LTV^{\mathrm{liq}} = 1 - 3.09 \times 0.160 \times \sqrt{5/252}
+= 1 - 0.1754 = 82.5\%.
+\]
+After smoothing and applying bounds: $\LTV^{\mathrm{liq},\star} = 80\%$.
+
+\subsection*{Stress LTV}
+$\delta_1^{\mathrm{hist}} = 22\%$, $\delta_2^{\mathrm{hist}} = 5\%$,
+$\delta_3^{\mathrm{hist}} = 28\%$:
+\[
+V^{\mathrm{stress}}
+= 64{,}000 \times (1-0.22) + 19{,}796 \times (1-0.05) + 14{,}000 \times (1-0.28)
+= 49{,}920 + 18{,}806 + 10{,}080
+= \EUR{78{,}806}.
+\]
+\[
+\LTV^{\mathrm{stress}} = \frac{55{,}000}{78{,}806} = \textbf{69.8\%}.
+\]
+The Stress LTV is below $\LTV^{\mathrm{liq},\star} = 80\%$: \textbf{no pre-emptive trigger}.
+
+\subsection*{Reverse Stress Break-Even}
+The uniform shock required to make $L \geq V^{\mathrm{adj}}$:
+\[
+\delta^* = 1 - \frac{L}{V^{\mathrm{adj}}} = 1 - \frac{55{,}000}{97{,}796} = 43.8\%.
+\]
+A simultaneous 43.8\% uniform drawdown across all positions would render the
+loan uncovered. This exceeds the GFC peak drawdown of $\approx 35\%$, indicating
+adequate stress resilience for this portfolio.
+
+\end{document}

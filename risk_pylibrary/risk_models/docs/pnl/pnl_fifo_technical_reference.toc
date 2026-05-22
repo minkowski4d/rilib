@@ -1,0 +1,34 @@
+\contentsline {section}{\numberline {1}Overview}{3}{section.1}%
+\contentsline {section}{\numberline {2}Top-Level Task: \texttt {main\_run\_pnl\_fifo}}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Purpose}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Pipeline Flow}{4}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Incremental Date Logic}{4}{subsection.2.3}%
+\contentsline {section}{\numberline {3}\texttt {initiate\_pnl\_engine} — Day-Loop Orchestrator}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Function Signature}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Detailed Flow}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Cache Carry-Forward}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Outputs}{7}{subsection.3.4}%
+\contentsline {section}{\numberline {4}\texttt {pnl\_realised\_polars} — FIFO Calculation Engine}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Role in the Call Stack}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Input / Output}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Internal Flow}{8}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Data Structures}{8}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Mathematical Formulation}{9}{subsection.4.5}%
+\contentsline {subsubsection}{\numberline {4.5.1}Sign Convention}{9}{subsubsection.4.5.1}%
+\contentsline {subsubsection}{\numberline {4.5.2}Sell Trade ($q_i < 0$): Long Book Realisation}{9}{subsubsection.4.5.2}%
+\contentsline {subsubsection}{\numberline {4.5.3}Buy Trade ($q_i > 0$): Short Cover}{9}{subsubsection.4.5.3}%
+\contentsline {subsubsection}{\numberline {4.5.4}Total Realised P\&L per Trade}{9}{subsubsection.4.5.4}%
+\contentsline {subsubsection}{\numberline {4.5.5}Unrealised P\&L}{10}{subsubsection.4.5.5}%
+\contentsline {subsubsection}{\numberline {4.5.6}P\&L Identity}{10}{subsubsection.4.5.6}%
+\contentsline {section}{\numberline {5}FIFO Matching Examples}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Standard Sell Against Long Book}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Sell Exceeds Available Longs — Short Queue Created}{10}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Key Implementation Notes}{11}{section.6}%
+\contentsline {section}{\numberline {7}Infrastructure: AWS ECR \& Airflow Orchestration}{11}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Docker Image on AWS ECR}{11}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Snowflake Credentials Injection}{11}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Airflow DAG}{12}{subsection.7.3}%
+\contentsline {subsubsection}{\numberline {7.3.1}DAG Workflow}{12}{subsubsection.7.3.1}%
+\contentsline {subsubsection}{\numberline {7.3.2}Task Descriptions}{12}{subsubsection.7.3.2}%
+\contentsline {section}{\numberline {8}Full Call-Stack Summary}{13}{section.8}%
+\contentsline {section}{\numberline {A}Source Code: \texttt {pnl\_realised\_polars}}{13}{appendix.A}%

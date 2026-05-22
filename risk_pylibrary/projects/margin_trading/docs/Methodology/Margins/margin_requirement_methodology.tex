@@ -1,0 +1,794 @@
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{bbm}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[round]{natbib}
+
+% ── Colours ───────────────────────────────────────────────────────────────────
+\definecolor{darkblue}{RGB}{0,51,102}
+\definecolor{midblue}{RGB}{0,102,179}
+\definecolor{lightgray}{RGB}{245,245,245}
+
+% ── Hyperref setup ────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=darkblue,
+    urlcolor=midblue,
+    citecolor=darkblue,
+    pdfauthor={Risk Management},
+    pdftitle={Margin Requirement Methodology}
+}
+
+% ── Header / Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{darkblue}{\small Margin Requirement Methodology v1.0}}
+\lhead{\textcolor{darkblue}{\small Confidential}}
+\cfoot{\thepage}
+
+% ── Section formatting ────────────────────────────────────────────────────────
+\titleformat{\section}{\large\bfseries\color{darkblue}}{{\thesection}}{1em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{midblue}}{\thesubsection}{1em}{}
+
+% ── Theorem environments ──────────────────────────────────────────────────────
+\newtheorem{definition}{Definition}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{remark}{Remark}[section]
+
+% ── Custom commands ───────────────────────────────────────────────────────────
+\newcommand{\MR}{\mathrm{MR}}
+\newcommand{\IM}{\mathrm{IM}}
+\newcommand{\MM}{\mathrm{MM}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\VaR}{\mathrm{VaR}}
+\newcommand{\CVaR}{\mathrm{CVaR}}
+\newcommand{\LTV}{\mathrm{LTV}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}\\[0.4cm]
+    {\Huge\bfseries\color{darkblue} Margin Requirement Methodology\\[0.3cm]
+    for Margin Trading}\\[0.4cm]
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}\\[2cm]
+
+    {\large\textbf{Version:} 1.0}\\[0.3cm]
+    {\large\textbf{Classification:} Confidential}\\[0.3cm]
+    {\large\textbf{Owner:} Risk Management / Quantitative Risk}\\[0.3cm]
+    {\large\textbf{Date:} \today}\\[3cm]
+
+    \begin{abstract}
+    \noindent
+    This document establishes the two-layer margin requirement framework
+    underpinning the margin trading product. The framework is structured as
+    a bottom-up hierarchy: a \emph{Layer~1} instrument-by-instrument floor
+    grounded in the FINRA/Regulation~T paradigm, and a \emph{Layer~2}
+    portfolio-level overlay that accounts for cross-asset correlations,
+    diversification effects, concentration risk, and dynamic regime adjustment.
+    The instrument floor provides an unconditional, rule-based minimum that
+    is always enforced; the portfolio overlay may only tighten margin
+    requirements relative to that floor, never relax them below it.
+    This document serves as the methodological foundation for the
+    Loan-to-Value~(LTV) Methodology (\emph{see} \texttt{trb\_method.tex}),
+    which translates the margin requirement framework into operational LTV
+    thresholds, haircut schedules, and liquidation triggers.
+    \end{abstract}
+
+    \vfill
+    {\small\color{gray} This document is confidential and intended solely for use
+    by authorised personnel of the Platform and the Lender. Reproduction or
+    distribution without written consent is prohibited.}
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Purpose and Scope}
+\label{sec:scope}
+
+\subsection{Purpose}
+This document establishes the quantitative framework for determining margin
+requirements across the margin trading product. It defines the methodology
+for both the instrument-level and portfolio-level treatment of margin,
+providing a single authoritative reference for:
+\begin{itemize}[leftmargin=1.5em]
+    \item the regulatory and conceptual basis for instrument-by-instrument
+    margin requirements (Layer~1);
+    \item the derivation of portfolio-level margin adjustments incorporating
+    correlation, diversification, and concentration effects (Layer~2);
+    \item the interaction rule between the two layers, ensuring the
+    portfolio overlay can only tighten the instrument floor;
+    \item the governance, recalibration, and validation requirements for
+    each layer.
+\end{itemize}
+
+\noindent The LTV Methodology document (\texttt{trb\_method.tex}) references
+this framework directly and translates its outputs into operational LTV
+thresholds, haircut schedules, dynamic regime adjustments, and liquidation
+triggers.
+
+\subsection{Scope}
+This methodology applies to all margined positions held as collateral in
+segregated custody accounts for retail and professional clients. It covers
+equities, broad-market ETFs, and fixed income instruments that meet
+collateral eligibility criteria.
+
+\noindent The following are \emph{explicitly out of scope}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Derivatives margining} -- futures, options, swaps, and any
+    other exchange-traded or OTC derivative instruments. Clients are restricted
+    to non-derivative instruments only; accordingly, concepts specific to
+    derivatives margining (variation margin in the EMIR sense, premium margin,
+    futures mark-to-market settlement) do not apply and are not addressed.
+    \item \textbf{Premium margin} -- the margin component covering the current
+    market value of short option positions. Entirely irrelevant given the
+    non-derivative client universe.
+    \item \textbf{Short-selling margin requirements.}
+    \item \textbf{Unsecured lending.}
+\end{itemize}
+
+\subsection{Regulatory Context}
+The framework draws on the following regulatory standards:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Regulation T (Reg~T)} -- Federal Reserve regulation
+    governing the extension of credit by brokers and dealers; establishes
+    a 50\% initial margin requirement for most equity securities and forms
+    the basis of the instrument-level floor in Layer~1.
+    \item \textbf{FINRA Rule 4210} -- FINRA maintenance margin requirements
+    (minimum 25\% equity for long positions); provides the maintenance
+    floor parameters for Layer~1.
+    \item \textbf{MiFID~II / MiFIR} -- suitability and leverage requirements
+    for retail and professional clients in the EU.
+    \item \textbf{CRR~II / Basel~III} -- Financial Collateral Comprehensive
+    Method (FCCM) for regulatory haircut floors, referenced in Layer~1
+    haircut calibration.
+    \item \textbf{ESMA Guidelines on Leverage} -- retail client leverage
+    caps by asset class, acting as binding ceilings on both layers.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Key Definitions and Margin Concepts}
+\label{sec:definitions}
+
+\begin{definition}[Current Liquidating Margin]
+The \emph{current liquidating margin} (CLM) is the net equity value of a
+client account if all open positions were closed at current market prices.
+It is defined as:
+\[
+\mathrm{CLM}_t = V_t^{\mathrm{adj}} - L_t,
+\]
+where $V_t^{\mathrm{adj}}$ is the adjusted collateral value and $L_t$ is
+the outstanding loan balance including accrued interest. CLM is the primary
+measure of a client's cushion against a margin call and is monitored
+continuously. It is the non-derivative equivalent of the equity balance
+concept in exchange-margined accounts.
+\end{definition}
+
+\begin{definition}[Mark-to-Market Collateral Revaluation]
+The daily (and intraday) revaluation of collateral positions at current
+market prices. Changes in $V_t^{\mathrm{adj}}$ directly affect CLM and
+may trigger margin calls when CLM falls below the maintenance margin
+requirement. This is the functional analogue of \emph{variation margin} as
+used in derivatives markets (EMIR), adapted to the non-derivative collateral
+context. In this framework it is governed by the LTV calculation schedule
+defined in \texttt{trb\_method.tex} Section~4.3, which specifies real-time,
+intraday, and end-of-day revaluation frequencies and price source hierarchies.
+\emph{Variation margin in the EMIR/futures sense -- daily cash settlement of
+mark-to-market P\&L on derivative positions -- does not apply here, as
+clients trade non-derivative instruments only.}
+\end{definition}
+
+\begin{definition}[Initial Margin]
+The minimum equity a client must deposit at the time of loan origination,
+expressed as a fraction of the position market value (see
+Section~\ref{subsec:initial_margin}).
+\end{definition}
+
+\begin{definition}[Maintenance Margin]
+The minimum equity a client must maintain at all times. A breach triggers
+a margin call. Defined at the instrument level in Layer~1 and at the
+portfolio level in Layer~2 (see Sections~\ref{subsec:maintenance_margin}
+and \ref{sec:layer2}).
+\end{definition}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Framework Overview}
+\label{sec:overview}
+
+The margin requirement $\MR_t$ for a client portfolio at time $t$ is
+determined as the maximum of the two layer outputs:
+\begin{equation}
+    \MR_t = \max\!\left(\MR_t^{(1)},\; \MR_t^{(2)}\right),
+    \label{eq:mr_total}
+\end{equation}
+where $\MR_t^{(1)}$ is the Layer~1 instrument-level aggregate and
+$\MR_t^{(2)}$ is the Layer~2 portfolio-level requirement. This construction
+guarantees that the portfolio overlay can \emph{only increase} the total
+margin requirement relative to the instrument floor -- it can never grant
+a credit that reduces it below the regulatory minimum.
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{|c|}
+\hline
+\\
+\textbf{Layer 2: Portfolio Overlay} \\
+{\small Correlation $\cdot$ Diversification $\cdot$ Concentration $\cdot$ Regime} \\
+\\
+\hline
+\\
+\textbf{Layer 1: Instrument Floor} \\
+{\small Reg T / FINRA~4210 $\cdot$ Asset-Class Haircuts $\cdot$ FCCM Floors} \\
+\\
+\hline
+\end{tabular}
+\caption{Two-layer margin requirement structure. Layer~1 provides the
+unconditional floor; Layer~2 may only add to it.}
+\label{fig:layers}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Layer 1: Instrument-by-Instrument Margin (Reg~T Floor)}
+\label{sec:layer1}
+
+\subsection{Conceptual Basis}
+Layer~1 follows the Regulation~T and FINRA Rule~4210 paradigm: each
+position is assessed independently against prescribed initial and maintenance
+margin rates. No netting or correlation benefit is recognised at this stage.
+The aggregate Layer~1 requirement is the sum of individual instrument
+requirements:
+\begin{equation}
+    \MR_t^{(1)} = \sum_{i=1}^{N} \MR_{i,t}^{(1)}.
+    \label{eq:layer1_aggregate}
+\end{equation}
+
+\subsection{Initial Margin Requirement}
+\label{subsec:initial_margin}
+
+The initial margin requirement establishes the minimum client equity that
+must be in place \emph{at the time a margin loan is originated or a new
+position is added to the collateral pool}. It acts as the first line of
+defence against credit loss: by requiring the client to fund a minimum
+fraction of the position from their own equity, the Platform limits its
+maximum loan exposure relative to collateral value from the outset.
+
+The initial margin requirement for a long position in instrument $i$ is:
+\begin{equation}
+    \IM_{i,t} = m_i^{\IM} \cdot P_{i,t} \cdot Q_i,
+    \label{eq:initial_margin}
+\end{equation}
+where $m_i^{\IM} \in (0,1]$ is the initial margin rate applicable to
+instrument $i$ and $P_{i,t} \cdot Q_i$ is the mark-to-market value of
+the position at origination.
+
+\subsubsection*{Regulatory Floor}
+Under Regulation~T, $m_i^{\IM} \geq 0.50$ for marginable equity securities,
+meaning the client must fund at least 50\% of the purchase price from equity.
+The Platform applies house initial margin rates at or above this floor,
+calibrated by asset class as detailed in Table~\ref{tab:margin_rates}.
+For fixed income instruments, the Reg~T floor does not prescribe a specific
+rate; the Platform applies rates consistent with CRR~II FCCM supervisory
+haircuts scaled to an equivalent margin basis.
+
+\subsubsection*{Relationship to LTV at Origination}
+The initial margin rate determines the maximum LTV at which a new loan may
+be originated. Specifically, the maximum initial LTV is:
+\begin{equation}
+    \LTV^{\mathrm{init}}_i = 1 - m_i^{\IM},
+    \label{eq:ltv_init}
+\end{equation}
+so a 50\% initial margin rate implies a maximum origination LTV of 50\%.
+For a multi-asset portfolio, the effective initial LTV cap is the
+value-weighted average of per-instrument caps, subject to the portfolio-level
+regime adjustment defined in Layer~2 (Section~\ref{sec:layer2}) and the
+regime-dependent initial LTV schedule in \texttt{trb\_method.tex} Section~5.4.
+
+\subsubsection*{Recalculation Triggers}
+Although the initial margin requirement is primarily assessed at origination,
+it is recalculated and reapplied in the following circumstances:
+\begin{itemize}[leftmargin=1.5em]
+    \item A client adds a new position or increases an existing position.
+    \item A position is reclassified to a higher-risk asset class (e.g.\
+    following a credit rating downgrade or a reduction in ADTV below a
+    liquidity threshold).
+    \item A regime transition to Stress is declared, triggering the lower
+    initial LTV cap for newly originated or materially increased positions
+    (existing positions are not force-cured solely on regime change).
+\end{itemize}
+
+\subsection{Maintenance Margin Requirement}
+\label{subsec:maintenance_margin}
+
+The maintenance margin requirement is the minimum equity the client must
+hold at all times:
+\begin{equation}
+    \MM_{i,t} = m_i^{\MM} \cdot P_{i,t} \cdot Q_i,
+    \label{eq:maintenance_margin}
+\end{equation}
+where $m_i^{\MM}$ is the maintenance margin rate. Under FINRA Rule~4210,
+$m_i^{\MM} \geq 0.25$ for long equity positions. The Platform applies
+enhanced house maintenance rates as detailed in Table~\ref{tab:margin_rates}.
+
+\subsection{Asset-Class Margin Rate Schedule}
+\label{subsec:margin_rates}
+
+\begin{table}[H]
+\centering
+\caption{Instrument-Level Margin Rate Schedule (Layer~1)}
+\label{tab:margin_rates}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Asset Class} & \textbf{Subcategory}
+    & \textbf{Initial Margin $m^{\IM}$}
+    & \textbf{Maintenance Margin $m^{\MM}$} \\
+\midrule
+Government Bonds & AAA--AA, maturity $< 1$Y     & 2\%   & 1\%   \\
+                 & AAA--AA, 1--5Y                & 5\%   & 3\%   \\
+                 & AAA--AA, 5--10Y               & 8\%   & 5\%   \\
+                 & A--BBB, any maturity          & 15\%  & 10\%  \\
+IG Corporate Bonds & 0--5Y                       & 15\%  & 10\%  \\
+                   & 5Y+                         & 20\%  & 15\%  \\
+Large-Cap Equities & MSCI World, high liquidity  & 50\%  & 30\%  \\
+Mid-Cap Equities   & Mid liquidity               & 60\%  & 35\%  \\
+Small-Cap Equities & Low liquidity               & 75\%  & 50\%  \\
+ETFs (broad)       & Major index replication     & 50\%  & 30\%  \\
+ETFs (thematic)    & Sector / factor exposure    & 60\%  & 35\%  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Initial margin rates at or above 50\% for equities are consistent
+with Reg~T. Rates for fixed income reflect FCCM supervisory haircut floors
+scaled to an equivalent margin basis.
+
+\subsection{Layer 1 Margin Call Trigger}
+
+A Layer~1 margin call is triggered at the instrument level when the equity
+in a single-position account falls below the maintenance margin requirement,
+i.e.\ when:
+\[
+E_{i,t} = P_{i,t}\,Q_i - D_{i,t} < \MM_{i,t},
+\]
+where $D_{i,t}$ is the debit balance (amount borrowed) attributed to
+position $i$ on a pro-rata basis. The required deposit to restore the
+position to the initial margin level is:
+\[
+\Delta_i^{\mathrm{call}} = \IM_{i,t} - E_{i,t}.
+\]
+
+\subsection{FX and Non-EUR Positions}
+\label{subsec:fx_layer1}
+
+For assets denominated in currency $c \neq \mathrm{EUR}$, the margin
+requirement is computed on the EUR-equivalent market value, and an
+additional FX margin add-on is applied:
+\begin{equation}
+    \MR_{i,t}^{(1),\mathrm{FX}}
+    = m_i^{\IM} \cdot P_{i,t}^{\mathrm{EUR}} \cdot Q_i
+    \;+\; m_{\mathrm{FX}(c)} \cdot P_{i,t}^{\mathrm{EUR}} \cdot Q_i,
+    \label{eq:layer1_fx}
+\end{equation}
+where $m_{\mathrm{FX}(c)}$ is the FX margin rate for currency pair
+$c$/EUR, calibrated consistently with the haircut formula in
+\texttt{trb\_method.tex} Section~3.2.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Layer 2: Portfolio-Level Margin Overlay}
+\label{sec:layer2}
+
+\subsection{Conceptual Basis}
+
+Layer~2 assesses margin requirements at the portfolio level, recognising
+that the true risk of a collateral portfolio is not merely the sum of
+individual position risks. Two distinct effects are captured:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Diversification benefit:} Low or negative pairwise
+    correlations reduce portfolio-level risk below the sum-of-parts.
+    Layer~2 can recognise this benefit, subject to a floor equal to the
+    Layer~1 aggregate (equation~\eqref{eq:mr_total}).
+    \item \textbf{Concentration and correlation penalty:} Highly correlated
+    or concentrated portfolios may exhibit risk \emph{above} the sum-of-parts
+    during stress. Layer~2 applies a multiplicative penalty in such cases,
+    increasing margin requirements beyond the Layer~1 floor.
+\end{enumerate}
+
+\noindent The Layer~2 margin requirement is defined as:
+\begin{equation}
+    \MR_t^{(2)} = \VaR_\alpha\!\left(\Delta V_t;\,\hat{\Sigma}_t,\,\Delta t\right)
+    \cdot \Phi(\bar{\rho}_t, \kappa_t),
+    \label{eq:layer2}
+\end{equation}
+where $\VaR_\alpha(\cdot)$ is the portfolio VaR at confidence level $\alpha$,
+estimated under the covariance structure $\hat{\Sigma}_t$, and
+$\Phi(\bar{\rho}_t, \kappa_t)$ is a concentration and correlation multiplier
+defined in Section~\ref{subsec:concentration_multiplier}.
+
+\subsection{Portfolio VaR Estimation}
+\label{subsec:portfolio_var}
+
+The portfolio profit-and-loss over the liquidation horizon $\Delta t$ is
+approximated as:
+\[
+\Delta V_t \approx \sum_{i=1}^{N} w_i \cdot P_{i,t} \cdot Q_i \cdot r_{i,t+\Delta t},
+\]
+where $w_i = (1-h_i)$ is the haircut-adjusted weight of instrument $i$
+and $r_{i,t+\Delta t}$ is the return over $[t, t+\Delta t]$.
+
+\noindent Returns are modelled as jointly normal with zero mean and
+covariance matrix $\hat{\Sigma}_t \cdot \Delta t$, where $\hat{\Sigma}_t$
+is estimated via EWMA with decay factor $\lambda = 0.94$ on a 252-day
+window. The portfolio variance is:
+\begin{equation}
+    \hat{\sigma}_{p,t}^2 = \mathbf{w}^\top \hat{\Sigma}_t\, \mathbf{w},
+    \label{eq:port_var}
+\end{equation}
+where $\mathbf{w} = (w_1 P_{1,t} Q_1, \ldots, w_N P_{N,t} Q_N)^\top /
+V_t^{\mathrm{adj}}$ is the vector of adjusted value weights.
+
+\noindent The parametric portfolio VaR at confidence level $\alpha$
+over horizon $\Delta t$ is:
+\begin{equation}
+    \VaR_\alpha\!\left(\Delta V_t\right)
+    = z_\alpha\,\hat{\sigma}_{p,t}\,\sqrt{\Delta t}\,V_t^{\mathrm{adj}},
+    \label{eq:port_var_formula}
+\end{equation}
+where $z_\alpha = \Phi^{-1}(\alpha)$ is the standard normal quantile
+(e.g.\ $z_{0.99} = 2.326$ for $\alpha = 99\%$).
+
+\begin{remark}
+    For portfolios with significant fat-tail exposures, the parametric
+    normal VaR in equation~\eqref{eq:port_var_formula} may underestimate
+    tail risk. In such cases the portfolio VaR is estimated via Monte Carlo
+    simulation using a multivariate $t$-distribution with fitted degrees of
+    freedom $\nu$, as specified in the stress testing section of
+    \texttt{trb\_method.tex}.
+\end{remark}
+
+\subsection{Concentration and Correlation Multiplier}
+\label{subsec:concentration_multiplier}
+
+The multiplier $\Phi$ is composed of two additive adjustments:
+\begin{equation}
+    \Phi(\bar{\rho}_t, \kappa_t) = 1 + \kappa(\bar{\rho}_t) + \gamma(HHI_t),
+    \label{eq:phi}
+\end{equation}
+where $\kappa(\bar{\rho}_t)$ is the correlation penalty and $\gamma(HHI_t)$
+is the concentration penalty.
+
+\subsubsection*{Correlation Penalty}
+
+Let $\bar{\rho}_t$ denote the average pairwise Pearson correlation of daily
+log-returns across all collateral positions, estimated over a 60-day rolling
+window. The correlation penalty is:
+\begin{equation}
+    \kappa(\bar{\rho}_t) =
+    \begin{cases}
+        0 & \bar{\rho}_t \leq 0.4 \\[4pt]
+        0.05 \cdot \dfrac{\bar{\rho}_t - 0.4}{0.6} & 0.4 < \bar{\rho}_t \leq 1
+    \end{cases}
+    \label{eq:kappa_layer2}
+\end{equation}
+This linearly ramps from 0\% to 5\% as average correlation rises from 0.4
+to 1.0, reflecting diminishing diversification in stress.
+
+\subsubsection*{Concentration Penalty}
+
+Portfolio concentration is measured by the Herfindahl--Hirschman Index (HHI):
+\begin{equation}
+    HHI_t = \sum_{i=1}^{N} w_i^2,
+    \label{eq:hhi}
+\end{equation}
+where $w_i$ are the adjusted value weights. The concentration penalty is:
+\begin{equation}
+    \gamma(HHI_t) =
+    \begin{cases}
+        0                                          & HHI_t \leq 0.10 \\[4pt]
+        0.10 \cdot \dfrac{HHI_t - 0.10}{0.90}    & 0.10 < HHI_t \leq 1
+    \end{cases}
+    \label{eq:gamma}
+\end{equation}
+This ramps from 0\% to 10\% as HHI rises from a well-diversified portfolio
+(0.10) to a fully concentrated single-name portfolio (1.0).
+
+\subsection{Regime-Adjusted Portfolio Margin}
+\label{subsec:regime_layer2}
+
+Portfolio margin requirements are adjusted dynamically according to the
+prevailing volatility regime. The regime classification (Normal, Elevated,
+Stress) follows the three-state VSTOXX-based rule defined in
+\texttt{trb\_method.tex} Section~5.2.
+
+In each regime, a multiplicative regime scalar $R_t$ is applied to the
+portfolio VaR:
+\begin{equation}
+    \MR_t^{(2),\mathrm{regime}} = R_t \cdot \MR_t^{(2)},
+    \label{eq:mr_regime}
+\end{equation}
+with regime scalars:
+
+\begin{table}[H]
+\centering
+\caption{Regime Scalars for Portfolio Margin Overlay (Layer~2)}
+\label{tab:regime_scalars}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Regime} & \textbf{VSTOXX Level} & \textbf{Regime Scalar $R_t$} \\
+\midrule
+Normal   & $<$ 20  & 1.00 \\
+Elevated & 20--30  & 1.15 \\
+Stress   & $>$ 30  & 1.35 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The asymmetric persistence rules for regime transitions (immediate
+downgrade, 5-day confirmation for upgrade) defined in \texttt{trb\_method.tex}
+Section~5.4 apply equally to the regime scalar.
+
+\subsection{Single-Name Cap}
+
+Regardless of the portfolio VaR result, no single issuer may contribute
+more than 20\% of the adjusted collateral value in the portfolio overlay
+computation. Positions exceeding this cap are split: the capped portion
+is treated as a concentrated single-name exposure and assessed at the
+Layer~1 rate without diversification benefit.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Layer Interaction and Effective Margin Requirement}
+\label{sec:interaction}
+
+\subsection{The Floor Constraint}
+
+The two-layer architecture enforces the following ordering at all times:
+\begin{equation}
+    \MR_t = \max\!\left(\MR_t^{(1)},\; \MR_t^{(2),\mathrm{regime}}\right)
+    \geq \MR_t^{(1)}.
+    \label{eq:floor_constraint}
+\end{equation}
+
+This means:
+\begin{itemize}[leftmargin=1.5em]
+    \item In \textbf{Normal} regimes with a well-diversified portfolio
+    ($\bar{\rho}_t$ low, $HHI_t$ low), the portfolio VaR may fall
+    below the Layer~1 aggregate, but the effective requirement is still
+    $\MR_t^{(1)}$ -- the regulatory floor is never breached.
+    \item In \textbf{Stress} regimes or concentrated portfolios, the Layer~2
+    overlay will exceed the Layer~1 floor and the portfolio-level figure
+    drives the requirement.
+\end{itemize}
+
+\subsection{Decomposition of the Effective Margin Requirement}
+
+For reporting and client communication purposes, the effective margin
+requirement is decomposed as:
+
+\begin{equation}
+    \MR_t = \underbrace{\MR_t^{(1)}}_{\text{Reg T floor}}
+    \;+\;
+    \underbrace{\max\!\left(0,\; \MR_t^{(2),\mathrm{regime}} - \MR_t^{(1)}\right)}_{\text{Portfolio overlay add-on}}.
+    \label{eq:mr_decomp}
+\end{equation}
+
+\noindent This decomposition is used in client-facing margin statements and
+in the internal capital attribution to the lending desk.
+
+\subsection{Link to the LTV Framework}
+
+The margin requirement $\MR_t$ defined in equation~\eqref{eq:mr_total}
+translates directly into the LTV threshold structure of \texttt{trb\_method.tex}
+as follows. Let $E_t = V_t^{\mathrm{adj}} - L_t$ be the client equity. The
+LTV-equivalent of the effective margin requirement is:
+\begin{equation}
+    \LTV^{\mathrm{warn}}_t
+    = 1 - \frac{\MR_t}{V_t^{\mathrm{adj}}},
+    \label{eq:ltv_link}
+\end{equation}
+i.e.\ the warning LTV threshold is set such that the client equity at
+the threshold equals exactly the effective margin requirement. The
+liquidation threshold is derived from this via an additional buffer
+calibrated to the liquidation horizon, as specified in
+\texttt{trb\_method.tex} Section~5.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Margin Call Process}
+\label{sec:margin_call}
+
+\subsection{Trigger Hierarchy}
+
+Margin calls may be triggered at either layer:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Layer~1 trigger:} Client equity on any single position falls
+    below the instrument-level maintenance margin $\MM_{i,t}$ (Section~\ref{subsec:maintenance_margin}).
+    \item \textbf{Layer~2 trigger:} Portfolio-level LTV exceeds the
+    regime-adjusted warning threshold $\LTV^{\mathrm{warn},\star}_t$ as
+    defined in \texttt{trb\_method.tex} Section~6.
+\end{enumerate}
+
+\noindent A Layer~1 trigger requires cure of the breaching instrument
+irrespective of portfolio-level LTV. A Layer~2 trigger requires
+portfolio-level cure. Both triggers may be active simultaneously.
+
+\subsection{Cure Mechanisms}
+
+Three cure mechanisms are available (consistent with \texttt{trb\_method.tex}
+Section~6.2):
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Cash deposit / partial loan repayment:} Reduces $L_t$,
+    directly improving both layer computations.
+    \item \textbf{Additional eligible collateral:} Increases $V_t^{\mathrm{adj}}$
+    and reduces Layer~2 concentration (if diversifying) or Layer~1 shortfall.
+    \item \textbf{Partial position reduction:} Reduces both exposure and,
+    where the sold position is the binding concentration name, reduces
+    $HHI_t$ and $\Phi$.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Governance and Validation}
+\label{sec:governance}
+
+\subsection{Review Schedule}
+
+\begin{table}[H]
+\centering
+\caption{Governance Review Schedule}
+\begin{tabular}{ll}
+\toprule
+\textbf{Activity} & \textbf{Frequency} \\
+\midrule
+Layer~1 rate schedule review                     & Quarterly \\
+Layer~1 backtesting (Kupiec POF per asset class) & Quarterly \\
+Layer~2 covariance model recalibration (EWMA)    & Monthly \\
+Layer~2 regime scalar review                     & Semi-annual \\
+Concentration / correlation penalty review       & Quarterly \\
+Full methodology review                          & Annual \\
+Lender margin report (Layer~1 + Layer~2 split)   & Daily \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Backtesting}
+
+Layer~1 haircut adequacy is validated using the Kupiec Proportion of
+Failures (POF) test as specified in \texttt{trb\_method.tex} Section~9.1.
+For Layer~2, the portfolio VaR is backtested by comparing the predicted
+$\VaR_\alpha$ against realised daily portfolio P\&L. An exceedance rate
+$\hat{p} = x/T$ significantly above $1-\alpha$ triggers model review.
+Both the Kupiec and Christoffersen conditional coverage tests are applied.
+
+\subsection{Model Independence and Override}
+
+Layer~1 and Layer~2 are computed by independent model components. In the
+event of a Layer~2 model failure or data unavailability, the effective
+margin requirement falls back to $\MR_t^{(1)}$ automatically, ensuring
+the Reg~T floor is always enforced. Manual overrides to either layer
+require dual approval by Risk Management and the Head of Credit Risk,
+with written justification retained for audit purposes.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\appendix
+
+\section{Notation Summary}
+\label{app:notation}
+
+\begin{longtable}{cl}
+\toprule
+\textbf{Symbol} & \textbf{Description} \\
+\midrule
+\endhead
+$\MR_t$                          & Effective margin requirement at $t$ \\
+$\MR_t^{(1)}$                    & Layer~1 (instrument-level) aggregate margin requirement \\
+$\MR_t^{(2)}$                    & Layer~2 (portfolio-level) margin requirement \\
+$\IM_{i,t}$                      & Initial margin requirement for instrument $i$ at $t$ \\
+$\MM_{i,t}$                      & Maintenance margin requirement for instrument $i$ at $t$ \\
+$m_i^{\IM}$                      & Initial margin rate for instrument $i$ \\
+$m_i^{\MM}$                      & Maintenance margin rate for instrument $i$ \\
+$P_{i,t}$                        & Price of instrument $i$ at $t$ \\
+$Q_i$                            & Quantity held of instrument $i$ \\
+$h_i$                            & Haircut for instrument $i$ \\
+$w_i$                            & Adjusted value weight of instrument $i$ \\
+$\hat{\Sigma}_t$                 & EWMA covariance matrix at $t$ \\
+$\hat{\sigma}_{p,t}$             & Portfolio volatility at $t$ \\
+$\bar{\rho}_t$                   & Average pairwise correlation at $t$ \\
+$\kappa(\bar{\rho}_t)$           & Correlation penalty \\
+$HHI_t$                          & Herfindahl--Hirschman Index at $t$ \\
+$\gamma(HHI_t)$                  & Concentration penalty \\
+$\Phi(\bar{\rho}_t, \kappa_t)$   & Combined concentration and correlation multiplier \\
+$R_t$                            & Regime scalar \\
+$\VaR_\alpha$                    & Value-at-Risk at confidence level $\alpha$ \\
+$z_\alpha$                       & Standard normal quantile at level $\alpha$ \\
+$\Delta t$                       & Liquidation horizon (years) \\
+$\lambda$                        & EWMA decay factor \\
+$\LTV^{\mathrm{warn}}_t$        & Warning LTV threshold at $t$ (linked to $\MR_t$) \\
+$p^*$                            & Target loss probability tolerance \\
+\bottomrule
+\end{longtable}
+
+\section{Worked Example: Two-Layer Margin Requirement}
+\label{app:example}
+
+\subsection*{Portfolio}
+\begin{itemize}[leftmargin=1.5em]
+    \item 1,000 shares large-cap equity: $P = \text{EUR}\;80$, $h = 20\%$,
+    $\sigma = 18\%$ p.a., $m^{\IM} = 50\%$.
+    \item EUR~20,000 nominal 3Y AA government bond: price 101\%,
+    $h = 2\%$, $\sigma = 3\%$ p.a., $m^{\IM} = 5\%$.
+    \item 500 shares mid-cap equity: $P = \text{EUR}\;40$, $h = 30\%$,
+    $\sigma = 28\%$ p.a., $m^{\IM} = 60\%$.
+\end{itemize}
+
+\subsection*{Layer 1 Computation}
+\[
+\MR^{(1)} = 0.50 \times 80{,}000 + 0.05 \times 20{,}200 + 0.60 \times 20{,}000
+= 40{,}000 + 1{,}010 + 12{,}000 = \text{EUR}\;53{,}010.
+\]
+
+\subsection*{Layer 2 Computation}
+Portfolio adjusted value (from \texttt{trb\_method.tex} Appendix~B):
+$V^{\mathrm{adj}} = \text{EUR}\;97{,}796$, $L = \text{EUR}\;55{,}000$.
+
+Portfolio weights: $w_1 = 65.4\%$, $w_2 = 20.2\%$, $w_3 = 14.3\%$.
+
+$\hat{\sigma}_p \approx 16.0\%$ p.a.\ (from \texttt{trb\_method.tex}).
+
+\[
+\VaR_{0.99} = 2.326 \times 0.160 \times \sqrt{5/252} \times 97{,}796
+\approx \text{EUR}\;16{,}234.
+\]
+
+$HHI = 0.654^2 + 0.202^2 + 0.143^2 = 0.428 + 0.041 + 0.020 = 0.489$,
+so $\gamma = 0.10 \times (0.489 - 0.10)/0.90 = 4.3\%$.
+
+$\bar{\rho} = 0.30 < 0.40$, so $\kappa = 0\%$.
+
+$\Phi = 1 + 0 + 0.043 = 1.043$.
+
+Normal regime: $R = 1.00$.
+
+\[
+\MR^{(2)} = 1.043 \times 16{,}234 = \text{EUR}\;16{,}932.
+\]
+
+\subsection*{Effective Margin Requirement}
+\[
+\MR = \max(53{,}010,\; 16{,}932) = \textbf{EUR}\;53{,}010.
+\]
+Layer~1 is binding in this case (Normal regime, moderate portfolio).
+The portfolio overlay add-on is zero. In a Stress regime with
+$R = 1.35$ and elevated correlation, Layer~2 would compute
+$\approx \text{EUR}\;22{,}900$ -- still below Layer~1, confirming
+the Reg~T floor dominates for this relatively conservative portfolio.
+
+\subsection*{Link to LTV Warning Threshold}
+\[
+\LTV^{\mathrm{warn}} = 1 - \frac{53{,}010}{97{,}796} = 45.8\%.
+\]
+This warning LTV is more conservative than the regime-based threshold
+in \texttt{trb\_method.tex} (70\% in Normal), confirming the
+instrument-level floor is the binding constraint here.
+
+\end{document}

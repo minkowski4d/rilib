@@ -1,0 +1,196 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{amsmath, amssymb, booktabs, geometry, hyperref, xcolor, listings}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{gray!10}, frame=single}
+
+\title{\textbf{Trading Book PnL — FIFO Engine}\\[4pt]
+\large Incremental Realised \& Unrealised P\&L --- Model Documentation}
+\author{Risk Modelling --- F. Balloni}
+\date{May 2026}
+
+\begin{document}
+\maketitle
+
+%-----------------------------------------------------------------------
+\section{Overview}
+
+The Trading Book PnL engine computes daily \textbf{realised} and
+\textbf{unrealised P\&L} for the fractional-share trading book using a
+strict \textbf{First-In, First-Out (FIFO)} lot-matching methodology.
+The calculation runs incrementally: it picks up from the last cached
+open-position snapshot in Snowflake, processes all new trades up to
+the previous business day, and writes refreshed position and cache
+parquet files to S3.
+
+\textbf{Entry point:} \texttt{automation/task\_pnl\_trading\_book.py} \\
+\textbf{Core engine:} \texttt{risk\_models/pnl\_fifo.py} ---
+\texttt{initiate\_pnl\_engine}, \texttt{pnl\_realised\_polars}
+
+%-----------------------------------------------------------------------
+\section{Methodology}
+
+\subsection{Sign Convention}
+
+Each trade carries a signed quantity determined by its direction:
+\begin{equation}
+  q_i =
+  \begin{cases}
+    +\lvert q_i \rvert & \text{side} = \texttt{B} \quad\text{(buy)}\\
+    -\lvert q_i \rvert & \text{side} = \texttt{S} \quad\text{(sell)}
+  \end{cases}
+\end{equation}
+
+\subsection{FIFO Realised P\&L}
+
+Two queues are maintained per symbol: \texttt{fifo\_queue} (unmatched
+buy lots) and \texttt{short\_queue} (unmatched sell lots). Each lot
+preserves its individual execution price.
+
+\medskip
+\textbf{Sell trade} — matched against the oldest buy lots:
+\begin{equation}
+  \text{rPnL}_{ik} = m_{ik} \cdot (p_i - p_k^{B}),
+  \qquad m_{ik} = \min(\lvert q_i^{\text{rem}}\rvert,\; q_k^{B})
+\end{equation}
+
+\textbf{Buy trade} (short cover) — matched against the oldest short lots:
+\begin{equation}
+  \text{rPnL}_{ij} = m_{ij} \cdot (p_j^{S} - p_i),
+  \qquad m_{ij} = \min(q_i^{\text{rem}},\; q_j^{S})
+\end{equation}
+
+Total realised P\&L per trade:
+\begin{equation}
+  \text{rPnL}_i
+  = \underbrace{\sum_j m_{ij}(p_j^S - p_i)}_{\text{short cover}}
+  + \underbrace{\sum_k m_{ik}(p_i - p_k^B)}_{\text{long book}}
+\end{equation}
+
+\subsection{Unrealised P\&L}
+
+Residual open lots are marked to end-of-day prices:
+\begin{equation}
+  \text{uPnL}_s^{(t)}
+  = \sum_{\ell \in \text{open}(s)}
+    \bigl(P_t^{\text{EOD}} - p_\ell\bigr)\cdot q_\ell^{\text{open}}
+\end{equation}
+
+\subsection{P\&L Identity}
+
+\begin{equation}
+  \text{Total PnL}^{(T)}
+  = \sum_i \text{rPnL}_i + \text{uPnL}^{(T)}
+\end{equation}
+
+\subsection{Incremental Day Loop}
+
+The engine iterates over weekdays $d \in [t_{\text{start}}, t_{\text{end}}]$:
+\begin{equation}
+  t_{\text{start}} = \max(\texttt{cache report\_date}) + 1,
+  \qquad
+  t_{\text{end}} = \text{today} - 1
+\end{equation}
+At each step the residual open lots from day $d{-}1$ are prepended to
+the new trades before matching:
+$\mathcal{T}^{(d)} = \texttt{cache}^{(d-1)} \oplus \texttt{trades}^{(d)}$
+
+\subsection{Corporate Action Handling}
+
+Instruments with \texttt{booking\_category = 'CORPORATE\_ACTION'} are
+routed to \texttt{pnl\_realised\_ca}, which adjusts historical quantities
+by the relevant split ratio before FIFO matching. All other instruments
+are processed by \texttt{pnl\_realised\_polars} (Polars-accelerated).
+
+%-----------------------------------------------------------------------
+\section{Parameters}
+
+\begin{tabular}{llll}
+\toprule
+Parameter & Type & Example & Description \\
+\midrule
+\texttt{acct}          & int  & 9800001301        & Account number \\
+\texttt{tr\_sd}        & date & \texttt{date(2026,1,2)}  & Trade window start \\
+\texttt{tr\_ed}        & date & \texttt{date(2026,4,30)} & Trade window end \\
+\texttt{ca\_sd}        & date & \texttt{date(2026,1,1)}  & Cache snapshot date \\
+\texttt{refetch\_cache}& int  & 1                 & 1 = re-query Snowflake \\
+\texttt{save\_data}    & int  & 1                 & 1 = write parquet at end \\
+\texttt{save\_daily}   & int  & 0                 & 1 = write per-day parquet \\
+\texttt{data\_src}     & str  & \texttt{'share\_booking'} & Trade data source \\
+\texttt{trade\_qry}    & str  & \texttt{'old'}    & Query flavour (\texttt{old}/\texttt{new}) \\
+\texttt{pth}           & str  & \texttt{'/tmp'}   & Local output path \\
+\texttt{verbose}       & bool & False             & Print progress \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\textbf{Accounts and data sources:}
+
+\begin{tabular}{lll}
+\toprule
+Account    & \texttt{data\_src}       & \texttt{trade\_qry} \\
+\midrule
+9800001301 & \texttt{share\_booking}  & \texttt{old} \\
+9800003301 & \texttt{share\_booking}  & \texttt{old} \\
+9800001601 & \texttt{inquisitor}      & \texttt{new} \\
+9800003601 & \texttt{inquisitor}      & \texttt{new} \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Outputs}
+
+\begin{tabular}{lll}
+\toprule
+Key & Type & Content \\
+\midrule
+\texttt{out\_pos}        & DataFrame & Daily positions, rPnL, uPnL per symbol \\
+\texttt{out\_cache}      & DataFrame & Open FIFO lots for next-day carry-forward \\
+\texttt{out\_trade\_pnl} & DataFrame & Trade-level realised P\&L \\
+\texttt{fname\_pnl}      & str       & Path to position parquet (S3 upload target) \\
+\texttt{fname\_cache}    & str       & Path to cache parquet (S3 upload target) \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Advantages and Limitations}
+
+\begin{tabular}{p{7cm} p{7cm}}
+\toprule
+Advantages & Limitations \\
+\midrule
+Exact lot-level attribution & Python loop; not vectorised over symbols \\
+Preserves individual short prices & Memory-intensive for large trade histories \\
+Incremental — only processes new days & Requires reliable EOD price series \\
+Handles corporate actions separately & Missing prices backfilled to 1 (silent risk) \\
+Audit-ready cache chain & Three ISINs hard-excluded from feed \\
+\bottomrule
+\end{tabular}
+
+%-----------------------------------------------------------------------
+\section{Usage Example}
+
+\begin{lstlisting}[language=Python]
+from risk_models import pnl_fifo
+from datetime import date
+
+out = pnl_fifo.initiate_pnl_engine(
+    acct          = 9800001601,
+    tr_sd         = date(2026, 1, 2),
+    tr_ed         = date(2026, 4, 30),
+    ca_sd         = date(2026, 1, 1),
+    refetch_cache = 1,
+    save_data     = 1,
+    save_daily    = 0,
+    data_src      = 'inquisitor',
+    trade_qry     = 'new',
+    pth           = '/tmp',
+    verbose       = False,
+)
+
+out['out_pos']        # daily positions + PnL
+out['out_cache']      # open lots to carry forward
+out['out_trade_pnl']  # trade-level rPnL
+\end{lstlisting}
+
+\end{document}

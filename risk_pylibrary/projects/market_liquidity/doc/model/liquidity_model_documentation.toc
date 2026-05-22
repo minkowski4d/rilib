@@ -1,0 +1,46 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Mathematical Framework}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Position Representation}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Bid-Ask Spread Measures}{3}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Absolute Spread}{3}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Relative Spread}{3}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Spread in Basis Points}{4}{subsubsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.3}Amihud Illiquidity Ratio}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Volume Liquidity Ratio}{4}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Time to Liquidate}{4}{subsubsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.5}Market Impact Model}{4}{subsection.2.5}%
+\contentsline {subsubsection}{\numberline {2.5.1}Temporary Impact}{4}{subsubsection.2.5.1}%
+\contentsline {subsubsection}{\numberline {2.5.2}Permanent Impact}{5}{subsubsection.2.5.2}%
+\contentsline {subsubsection}{\numberline {2.5.3}Total Market Impact}{5}{subsubsection.2.5.3}%
+\contentsline {subsection}{\numberline {2.6}Composite Liquidity Score}{5}{subsection.2.6}%
+\contentsline {subsubsection}{\numberline {2.6.1}Spread-Based Score}{5}{subsubsection.2.6.1}%
+\contentsline {subsubsection}{\numberline {2.6.2}Volume-Based Score}{5}{subsubsection.2.6.2}%
+\contentsline {subsubsection}{\numberline {2.6.3}Liquidity Rating Classification}{5}{subsubsection.2.6.3}%
+\contentsline {section}{\numberline {3}Portfolio-Level Aggregation}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Total Portfolio Value}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Weighted Average Spread}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Total Liquidation Cost}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Portfolio Liquidity Cost Ratio}{6}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Average Liquidity Score}{6}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Algorithm and Flow Charts}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}High-Level Analysis Flow}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Position-Level Metric Calculation}{8}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Market Impact Calculation Flow}{8}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Composite Score Computation}{9}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Implementation Algorithm}{9}{section.5}%
+\contentsline {section}{\numberline {6}Practical Example}{9}{section.6}%
+\contentsline {subsection}{\numberline {6.1}AAPL Analysis}{9}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}MICRO Analysis (Illiquid Position)}{11}{subsection.6.2}%
+\contentsline {section}{\numberline {7}Interpretation and Usage}{11}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Position-Level Decisions}{11}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Portfolio-Level Risk Management}{12}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Regulatory Applications}{12}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Model Limitations and Extensions}{12}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Current Limitations}{12}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Potential Extensions}{12}{subsection.8.2}%
+\contentsline {subsubsection}{\numberline {8.2.1}Conditional Liquidity}{12}{subsubsection.8.2.1}%
+\contentsline {subsubsection}{\numberline {8.2.2}Optimal Execution}{13}{subsubsection.8.2.2}%
+\contentsline {subsubsection}{\numberline {8.2.3}Network Effects}{13}{subsubsection.8.2.3}%
+\contentsline {section}{\numberline {9}Conclusion}{13}{section.9}%
+\contentsline {section}{\numberline {10}References}{13}{section.10}%

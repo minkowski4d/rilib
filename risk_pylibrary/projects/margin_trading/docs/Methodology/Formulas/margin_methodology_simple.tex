@@ -1,0 +1,661 @@
+% ============================================================
+% Margin Requirements — Simplified Rule-Based Framework
+% Trade Republic — Margin Trading Methodology
+% Compile with: pdflatex margin_methodology_simple.tex
+% ============================================================
+
+\documentclass[9pt, a4paper]{extarticle}
+
+% ── Packages ─────────────────────────────────────────────
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault]{inter}
+\usepackage{parskip}
+\usepackage{longtable}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{pdflscape}
+\usepackage{colortbl}
+
+% ── Hyperref ─────────────────────────────────────────────
+\hypersetup{
+    hidelinks,
+    pdftitle  = {Margin Requirements — Simplified Rule-Based Framework},
+    pdfauthor = {},
+}
+
+% ── Section heading styles ────────────────────────────────
+\titleformat{\section}
+    {\large\bfseries}
+    {\thesection.}{0.6em}{}
+    [\titlerule]
+
+\titleformat{\subsection}
+    {\normalsize\bfseries}
+    {\thesubsection}{0.6em}{}
+
+\titleformat{\subsubsection}
+    {\normalsize\itshape}
+    {\thesubsubsection}{0.6em}{}
+
+\titlespacing{\section}{0pt}{1.6em}{0.8em}
+\titlespacing{\subsection}{0pt}{1.2em}{0.4em}
+\titlespacing{\subsubsection}{0pt}{1.0em}{0.3em}
+
+% ── Header / Footer ──────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textit{Margin Requirements — Simplified Rule-Based Framework}}
+\fancyhead[R]{\small\textsc{Strictly Private \& Confidential} $|$ April 2026}
+\fancyfoot[C]{\small\thepage}
+
+% ── Formula block environment ─────────────────────────────
+\newenvironment{formulabox}{\par\addvspace{4pt}}{\par\addvspace{4pt}}
+
+% ── Variable table command ────────────────────────────────
+\newcommand{\vartableheader}{%
+    \textbf{Symbol} & \textbf{Description}\\
+}
+
+% ── Euro symbol ──────────────────────────────────────────
+\newcommand{\EUR}[1]{\ifmmode\text{\texteuro}#1\else\texteuro#1\fi}
+
+% ── Alert box ────────────────────────────────────────────
+\newcommand{\alertbox}[1]{%
+    \par\vspace{4pt}%
+    \noindent\colorbox{gray!12}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+        \small #1}}%
+    \vspace{4pt}\par%
+}
+
+% ── Misc ─────────────────────────────────────────────────
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+% ─────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title page ───────────────────────────────────────────
+\begin{titlepage}
+\vspace*{4cm}
+\begin{center}
+    {\Huge\bfseries Margin Requirements}\\[0.5em]
+    {\Large Simplified Rule-Based Framework}\\[2em]
+    {\large Trade Republic Bank GmbH}\\[0.5em]
+    {\large Risk Modelling}\\[2em]
+    {\normalsize April 2026}\\[1em]
+    {\small\textsc{Strictly Private \& Confidential}}
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────
+\section{Overview}
+\label{sec:overview}
+% ─────────────────────────────────────────────────────────
+
+This document specifies a simplified, rule-based margin framework for margin trading
+products. Margin requirements are expressed as fixed percentage rates per asset class,
+applied directly as minimum equity conditions on the outstanding loan. No econometric
+modelling is required.
+
+The framework rests on a single unifying principle: the \textbf{haircut is the margin
+requirement}. An initial margin haircut $h_{\mathrm{IM}}$ of, say, 30\% means the
+customer must hold equity equal to at least 30\% of the current market value at all
+times during the IM phase. Equivalently, the outstanding loan must not exceed
+$(1 - h_{\mathrm{IM}})$ times the market value. This identity connects the haircut
+directly to the LTV monitoring limit.
+
+The framework consists of four margin components:
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{Initial Margin (IM)} — minimum equity condition at position open,
+          enforced for one trading day (the IM horizon). Expressed as rate $h_{\mathrm{IM}}$
+          on market value.
+    \item \textbf{Maintenance Margin (MM)} — ongoing minimum equity condition from
+          day two onwards. Expressed as rate $h_{\mathrm{MM}} \leq h_{\mathrm{IM}}$ on
+          market value, giving the customer more headroom once the initial risk window
+          has passed.
+    \item \textbf{Overnight Margin} — additional equity cushion required at end-of-day
+          (EOD) to cover the overnight risk window. Expressed as add-on rate
+          $h_{\mathrm{ON}}$ applied on top of the prevailing phase rate.
+    \item \textbf{Mark-to-Market (MTM) Margin} — continuous revaluation of the
+          outstanding loan against current market prices. Updates the LTV in real time;
+          a breach of the applicable LTV limit triggers immediate auto-liquidation.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────
+\section{Core Definitions}
+\label{sec:definitions}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Market Value and Loan}
+
+Let $N$ denote the number of units held in instrument~$i$ and $P_t$ the current
+market price. The \textbf{market value} at time~$t$ is:
+\[
+    \mathrm{MV}_t = N \times P_t
+\]
+
+The \textbf{outstanding loan} $L_t$ is the principal borrowed plus accrued interest
+to date. Customer equity is:
+\[
+    E_t = \mathrm{MV}_t - L_t
+\]
+
+\subsection{Loan-to-Value Ratio}
+
+The \textbf{LTV ratio} measures the loan relative to the current market value:
+
+\begin{formulabox}
+\[
+    \mathrm{LTV}_t = \frac{L_t}{\mathrm{MV}_t}
+\]
+\end{formulabox}
+
+An LTV of zero means the position is fully equity-funded. An LTV of one means the
+customer has no equity remaining. Because margin trading limits leverage, the LTV is
+always strictly below one.
+
+\subsection{The Haircut as LTV Limit}
+
+The core identity of this framework is that \textbf{the haircut $h$ defines both the
+margin requirement and the LTV monitoring limit}:
+
+\begin{formulabox}
+\[
+    \text{Margin requirement:} \quad E_t \;\geq\; h \times \mathrm{MV}_t
+\]
+\[
+    \text{Equivalent LTV condition:} \quad \mathrm{LTV}_t \;=\; \frac{L_t}{\mathrm{MV}_t}
+    \;\leq\; 1 - h
+\]
+\end{formulabox}
+
+The LTV limit for a given phase is therefore $1 - h$, where $h$ is the applicable
+margin rate. A higher margin rate produces a lower (more conservative) LTV limit.
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Symbol} & \textbf{Description} \\
+\midrule
+$h_{\mathrm{IM}}$   & Initial margin rate; applies on day of opening ($t = 0$) \\
+$h_{\mathrm{MM}}$   & Maintenance margin rate; applies from $t = 1$ onwards \\
+$h_{\mathrm{ON}}$   & Overnight margin add-on; applied at EOD on top of prevailing phase rate \\
+$T_{\mathrm{IM}}$   & IM horizon: 1 trading day \\
+$L_t$               & Outstanding loan at time $t$ \\
+$\mathrm{MV}_t$     & Market value at time $t$ \\
+$\mathrm{LTV}_t$    & Loan-to-Value ratio at time $t$ \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\section{Margin Components}
+\label{sec:components}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Initial Margin (IM)}
+
+Initial Margin applies at the moment a position is opened and remains in force for
+one trading day ($T_{\mathrm{IM}} = 1$). It is the most conservative condition,
+ensuring the customer enters the position with sufficient equity to absorb an adverse
+intraday move.
+
+\begin{formulabox}
+\[
+    \text{IM condition:} \quad \mathrm{LTV}_0 = \frac{L_0}{\mathrm{MV}_0} \;\leq\; 1 - h_{\mathrm{IM}}
+\]
+\end{formulabox}
+
+The maximum loan at opening and the minimum required equity follow directly:
+\[
+    L_{\max} = (1 - h_{\mathrm{IM}}) \times \mathrm{MV}_0
+    \qquad\qquad
+    E_{\min} = h_{\mathrm{IM}} \times \mathrm{MV}_0
+\]
+
+The auto-liquidation price during the IM phase (the price at which
+$\mathrm{LTV} = 1 - h_{\mathrm{IM}}$ exactly) is:
+\[
+    P^{*}_{\mathrm{IM}} = \frac{L_0}{N \times (1 - h_{\mathrm{IM}})}
+\]
+
+\subsection{Maintenance Margin (MM)}
+
+After one trading day, the position transitions from the IM phase to the Maintenance
+Margin phase. The MM rate $h_{\mathrm{MM}} \leq h_{\mathrm{IM}}$ is less conservative,
+raising the LTV limit and giving the customer more room. The same structural condition
+applies:
+
+\begin{formulabox}
+\[
+    \text{MM condition:} \quad \mathrm{LTV}_t = \frac{L_t}{\mathrm{MV}_t} \;\leq\; 1 - h_{\mathrm{MM}}
+    \qquad (t \geq 1)
+\]
+\end{formulabox}
+
+The auto-liquidation price in the MM phase:
+\[
+    P^{*}_{\mathrm{MM}} = \frac{L_t}{N \times (1 - h_{\mathrm{MM}})}
+\]
+
+Because $h_{\mathrm{MM}} < h_{\mathrm{IM}}$, we have $1 - h_{\mathrm{MM}} > 1 -
+h_{\mathrm{IM}}$ and therefore $P^{*}_{\mathrm{MM}} < P^{*}_{\mathrm{IM}}$: the
+position can absorb a larger adverse price move before liquidation fires in the MM
+phase.
+
+\subsection{Overnight Margin}
+
+At end-of-day, an additional overnight add-on $h_{\mathrm{ON}}$ is applied on top of
+the prevailing phase rate. This reflects the extended risk window during which
+continuous intraday monitoring is unavailable.
+
+\begin{formulabox}
+\[
+    \text{Overnight condition:} \quad \mathrm{LTV}^{\mathrm{ON}}_t = \frac{L_t}{\mathrm{MV}_t}
+    \;\leq\; 1 - h_{\mathrm{phase}} - h_{\mathrm{ON}}
+\]
+\end{formulabox}
+
+where $h_{\mathrm{phase}}$ is $h_{\mathrm{IM}}$ on day~0 and $h_{\mathrm{MM}}$ from
+day~1 onwards. The overnight LTV limit is therefore tighter (lower) than the intraday
+limit by exactly $h_{\mathrm{ON}}$.
+
+If the overnight condition is not met at EOD, the customer must either:
+\begin{enumerate}[leftmargin=2em]
+    \item deposit additional cash to reduce the LTV below $1 - h_{\mathrm{phase}} - h_{\mathrm{ON}}$, or
+    \item partially close the position before the EOD cut-off.
+\end{enumerate}
+Failure to remedy the breach triggers automatic liquidation of the excess exposure.
+
+The overnight auto-liquidation price:
+\[
+    P^{*}_{\mathrm{ON}} = \frac{L_t}{N \times (1 - h_{\mathrm{phase}} - h_{\mathrm{ON}})}
+\]
+
+\subsection{Mark-to-Market (MTM) Margin}
+
+MTM reflects the continuous revaluation of the open position as market prices move.
+It is not a separate cash margin call but a real-time update to the LTV:
+
+\begin{formulabox}
+\[
+    \mathrm{MTM}_t = \bigl(P_t - P_{t-1}\bigr) \times N
+\]
+\[
+    \mathrm{LTV}_t = \frac{L_t}{N \times P_t}
+\]
+\end{formulabox}
+
+A negative MTM (adverse price move) raises the LTV; a positive MTM lowers it. The
+LTV is recomputed \textbf{continuously} at each price update throughout the trading
+day. As soon as $\mathrm{LTV}_t$ breaches the applicable limit, auto-liquidation is
+triggered immediately — there is no grace period.
+
+\alertbox{\textbf{Auto-liquidation rule:} at any time $t$, if $\mathrm{LTV}_t > 1 - h_{\mathrm{phase}}$
+(intraday) or $\mathrm{LTV}_t > 1 - h_{\mathrm{phase}} - h_{\mathrm{ON}}$ (overnight check),
+the position is automatically liquidated at market prices. No margin call is issued.}
+
+% ─────────────────────────────────────────────────────────
+\section{Two-Phase Monitoring Framework}
+\label{sec:monitoring}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Phase Transition}
+
+The IM horizon is exactly one trading day. The transition from IM to MM is automatic:
+
+\[
+    h_{\mathrm{phase}}(t) =
+    \begin{cases}
+        h_{\mathrm{IM}} & t = 0 \text{ (day of opening)} \\
+        h_{\mathrm{MM}} & t \geq 1
+    \end{cases}
+\]
+
+\subsection{Intraday Monitoring (Both Phases)}
+
+At every price update the LTV is recomputed and checked against the intraday limit:
+
+\[
+    \mathrm{LTV}_t = \frac{L_t}{N \times P_t} \;\leq\; 1 - h_{\mathrm{phase}}(t)
+\]
+
+\subsection{EOD Overnight Check (Both Phases)}
+
+At end-of-day, the overnight add-on tightens the limit:
+\[
+    \mathrm{LTV}^{\mathrm{ON}}_t = \frac{L_t}{N \times P_t^{\mathrm{close}}}
+    \;\leq\; 1 - h_{\mathrm{phase}}(t) - h_{\mathrm{ON}}
+\]
+
+\subsection{LTV Limits Summary}
+
+\begin{tabularx}{\linewidth}{lllX}
+\toprule
+\textbf{Phase} & \textbf{Time} & \textbf{LTV limit} & \textbf{Action on breach} \\
+\midrule
+IM — intraday   & $t = 0$     & $1 - h_{\mathrm{IM}}$                          & Auto-liquidation \\
+IM — overnight  & $t = 0$ EOD & $1 - h_{\mathrm{IM}} - h_{\mathrm{ON}}$        & Top-up / reduce or auto-liquidation \\
+MM — intraday   & $t \geq 1$  & $1 - h_{\mathrm{MM}}$                          & Auto-liquidation \\
+MM — overnight  & $t \geq 1$ EOD & $1 - h_{\mathrm{MM}} - h_{\mathrm{ON}}$     & Top-up / reduce or auto-liquidation \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\section{Asset Class Rate Table}
+\label{sec:rates}
+% ─────────────────────────────────────────────────────────
+
+Fixed margin rates are maintained per asset class. All rates are expressed as a
+percentage of current market value.
+
+\begin{tabularx}{\linewidth}{lXXX}
+\toprule
+\textbf{Asset Class}
+  & \textbf{$h_{\mathrm{IM}}$}
+  & \textbf{$h_{\mathrm{MM}}$}
+  & \textbf{$h_{\mathrm{ON}}$} \\
+\midrule
+Major index equities (e.g.\ EuroStoxx~50, S\&P~500 constituents) & 15\% & 10\% & 3\% \\
+Other equities                                                     & 30\% & 25\% & 5\% \\
+Equity ETFs — broad market                                         & 15\% & 10\% & 3\% \\
+Equity ETFs — sector / thematic                                    & 20\% & 15\% & 4\% \\
+Investment-grade bonds ($\geq$ BBB)                                & 10\% & 7\%  & 2\% \\
+High-yield bonds ($<$ BBB)                                         & 30\% & 20\% & 5\% \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+\textit{Rates are reviewed at least quarterly. Individual instruments may be assigned
+higher rates at the discretion of Risk if recent volatility or liquidity conditions
+warrant it.}
+
+% ─────────────────────────────────────────────────────────
+\section{Worked Example}
+\label{sec:example}
+% ─────────────────────────────────────────────────────────
+
+\subsection{Setup}
+
+A customer opens a leveraged long position in an ``Other equity'' (non-index stock).
+Applicable rates: $h_{\mathrm{IM}} = 30\%$, $h_{\mathrm{MM}} = 25\%$,
+$h_{\mathrm{ON}} = 5\%$.
+
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Current price $P_0$         & \EUR{100.00} per share \\
+Number of shares $N$        & 150 \\
+Market value $\mathrm{MV}_0$ & $150 \times \EUR{100} = \EUR{15{,}000}$ \\
+Customer equity $E_0$       & \EUR{5{,}000} \\
+Outstanding loan $L_0$      & \EUR{15{,}000} $-$ \EUR{5{,}000} $= \EUR{10{,}000}$ \\
+Leverage                    & $3{\times}$ \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+
+Applicable LTV limits:
+
+\begin{tabularx}{\linewidth}{llll}
+\toprule
+\textbf{Phase} & \textbf{Rate(s)} & \textbf{LTV limit} & \textbf{Liquidation price $P^{*}$} \\
+\midrule
+IM intraday    & $h_{\mathrm{IM}} = 30\%$                        & $1 - 0.30 = 70\%$                           & $\EUR{10{,}000}/(150 \times 0.70) = \EUR{95.24}$ \\
+IM overnight   & $h_{\mathrm{IM}} + h_{\mathrm{ON}} = 35\%$     & $1 - 0.35 = 65\%$                           & $\EUR{10{,}000}/(150 \times 0.65) = \EUR{102.56}$ \\
+MM intraday    & $h_{\mathrm{MM}} = 25\%$                        & $1 - 0.25 = 75\%$                           & $\EUR{10{,}000}/(150 \times 0.75) = \EUR{88.89}$ \\
+MM overnight   & $h_{\mathrm{MM}} + h_{\mathrm{ON}} = 30\%$     & $1 - 0.30 = 70\%$                           & $\EUR{10{,}000}/(150 \times 0.70) = \EUR{95.24}$ \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Step 1 — Opening Check (IM Phase, $t = 0$)}
+
+\[
+    \mathrm{LTV}_0 = \frac{\EUR{10{,}000}}{\EUR{15{,}000}} = 66.7\%
+    \;\leq\; 70\%
+    \quad\Rightarrow\quad \textbf{Position may be opened.}
+\]
+
+Minimum equity the customer must post:
+\[
+    E_{\min} = h_{\mathrm{IM}} \times \mathrm{MV}_0 = 30\% \times \EUR{15{,}000} = \EUR{4{,}500}
+\]
+Customer posted \EUR{5{,}000} $>$ \EUR{4{,}500}: condition satisfied with a buffer of \EUR{500}.
+
+The IM intraday auto-liquidation price:
+\[
+    P^{*}_{\mathrm{IM}} = \frac{L_0}{N \times (1 - h_{\mathrm{IM}})}
+    = \frac{\EUR{10{,}000}}{150 \times 0.70}
+    = \mathbf{\EUR{95.24}}
+\]
+The stock must fall $-4.76\%$ from \EUR{100} before intraday auto-liquidation triggers.
+
+\subsection{Step 2 — EOD Overnight Check ($t = 0$ EOD)}
+
+The overnight LTV limit tightens to $1 - h_{\mathrm{IM}} - h_{\mathrm{ON}} = 65\%$.
+At EOD price \EUR{100} (unchanged intraday):
+\[
+    \mathrm{LTV}^{\mathrm{ON}}_0 = \frac{\EUR{10{,}000}}{\EUR{15{,}000}} = 66.7\%
+    \;>\; 65\%
+    \quad\Rightarrow\quad \textbf{Overnight condition breached.}
+\]
+
+The overnight auto-liquidation price:
+\[
+    P^{*}_{\mathrm{ON}} = \frac{\EUR{10{,}000}}{150 \times 0.65} = \EUR{102.56}
+\]
+At the current price of \EUR{100} the LTV already exceeds the 65\% overnight limit.
+The customer must post additional collateral before EOD cut-off.
+
+\textbf{Required top-up} to clear the overnight condition exactly:
+\[
+    L_{\max}^{\mathrm{ON}} = 65\% \times \EUR{15{,}000} = \EUR{9{,}750}
+    \qquad\Rightarrow\qquad
+    \text{Cash to post} = L_0 - L_{\max}^{\mathrm{ON}} = \EUR{10{,}000} - \EUR{9{,}750} = \EUR{250}
+\]
+After posting \EUR{250}: $L = \EUR{9{,}750}$, LTV$^{\mathrm{ON}} = 65\% = $ limit. Passed.
+
+\subsection{Step 3 — Transition to MM Phase ($t = 1$)}
+
+After one trading day the IM phase ends and MM governs. The LTV limit widens from
+70\% to 75\% (intraday). Assuming price remains \EUR{100} and loan is \EUR{9{,}750}
+after the overnight top-up:
+
+\[
+    \mathrm{LTV}_1 = \frac{\EUR{9{,}750}}{\EUR{15{,}000}} = 65.0\%
+    \;\leq\; 75\%
+    \quad\Rightarrow\quad \textbf{MM phase check passed.}
+\]
+
+The new MM intraday auto-liquidation price:
+\[
+    P^{*}_{\mathrm{MM}} = \frac{\EUR{9{,}750}}{150 \times 0.75} = \mathbf{\EUR{86.67}}
+\]
+The position now tolerates a $-13.3\%$ price decline before auto-liquidation — significantly
+more room than the IM phase.
+
+\subsection{Step 4 — Intraday MTM: Price Falls $-5\%$ to \EUR{95}}
+
+MTM is calculated continuously. At price \EUR{95}:
+\[
+    \mathrm{MTM} = (95 - 100) \times 150 = -\EUR{750}
+    \qquad
+    \mathrm{MV} = 150 \times \EUR{95} = \EUR{14{,}250}
+\]
+\[
+    \mathrm{LTV} = \frac{\EUR{9{,}750}}{\EUR{14{,}250}} = 68.4\%
+    \;\leq\; 75\%
+    \quad\Rightarrow\quad \textbf{Still open.}
+\]
+
+\subsection{Step 5 — Intraday MTM: Price Falls Further to \EUR{88}}
+
+\[
+    \mathrm{MV} = 150 \times \EUR{88} = \EUR{13{,}200}
+\]
+\[
+    \mathrm{LTV} = \frac{\EUR{9{,}750}}{\EUR{13{,}200}} = 73.9\%
+    \;\leq\; 75\%
+    \quad\Rightarrow\quad \textbf{Still open.}
+\]
+
+\subsection{Step 6 — Intraday MTM: Price Falls to \EUR{86.50}}
+
+\[
+    \mathrm{MV} = 150 \times \EUR{86.50} = \EUR{12{,}975}
+\]
+\[
+    \mathrm{LTV} = \frac{\EUR{9{,}750}}{\EUR{12{,}975}} = 75.1\%
+    \;>\; 75\%
+    \quad\Rightarrow\quad \textbf{AUTO-LIQUIDATION TRIGGERED.}
+\]
+
+The position is automatically liquidated at market price \EUR{86.50}. The customer
+receives the residual equity:
+\[
+    E_{\mathrm{final}} = \EUR{12{,}975} - \EUR{9{,}750} = \EUR{3{,}225}
+\]
+The customer has lost $\EUR{5{,}000} - \EUR{3{,}225} = \EUR{1{,}775}$ (35.5\% of their
+initial equity) due to the $-13.5\%$ price decline.
+
+\subsection{Summary Table}
+
+\begin{tabularx}{\linewidth}{lllllX}
+\toprule
+\textbf{Event} & \textbf{Price} & \textbf{Loan} & \textbf{MV} & \textbf{LTV} & \textbf{Limit / Status} \\
+\midrule
+Open ($t=0$, IM intraday)      & \EUR{100}    & \EUR{10{,}000} & \EUR{15{,}000} & $66.7\%$ & $\leq 70\%$ \quad \textbf{Open} \\
+EOD overnight ($t=0$)          & \EUR{100}    & \EUR{10{,}000} & \EUR{15{,}000} & $66.7\%$ & $\leq 65\%$ \quad \textbf{Breach} \\
+After top-up \EUR{250}         & \EUR{100}    & \EUR{9{,}750}  & \EUR{15{,}000} & $65.0\%$ & $\leq 65\%$ \quad \textbf{Cleared} \\
+MM phase open ($t=1$)          & \EUR{100}    & \EUR{9{,}750}  & \EUR{15{,}000} & $65.0\%$ & $\leq 75\%$ \quad \textbf{Open} \\
+MTM $-5\%$ ($t=1$)             & \EUR{95}     & \EUR{9{,}750}  & \EUR{14{,}250} & $68.4\%$ & $\leq 75\%$ \quad \textbf{Open} \\
+MTM $-12\%$ ($t=1$)            & \EUR{88}     & \EUR{9{,}750}  & \EUR{13{,}200} & $73.9\%$ & $\leq 75\%$ \quad \textbf{Open} \\
+MTM $-13.5\%$ ($t=1$)         & \EUR{86.50}  & \EUR{9{,}750}  & \EUR{12{,}975} & $75.1\%$ & $> 75\%$ \quad \textbf{LIQUIDATE} \\
+\bottomrule
+\end{tabularx}
+
+% ─────────────────────────────────────────────────────────
+\newpage
+\begin{landscape}
+
+\section{Comparison with Alternative Margin Frameworks}
+\label{sec:comparison}
+
+The table below applies all four frameworks to the same position:
+\textbf{150 shares at \EUR{100}, market value \EUR{15{,}000}, customer equity
+\EUR{5{,}000}, outstanding loan \EUR{10{,}000} ($3{\times}$ leverage)}.
+Where a framework does not permit the full $3{\times}$ position, the maximum
+feasible position on \EUR{5{,}000} equity is shown instead.
+
+\definecolor{highlight}{RGB}{255,245,200}
+
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabularx}{\linewidth}{>{\bfseries}p{4.2cm} p{3.8cm} p{3.8cm} p{3.8cm} p{4.2cm}}
+\toprule
+  & \textbf{IB — Reg T}
+  & \textbf{IB — Portfolio Margin}
+  & \textbf{TR Model-Based}
+  & \textbf{TR Simplified (this doc)} \\
+\midrule
+Core methodology
+  & Flat regulatory rule (50\% of MV, Reg T / FINRA Rule 4210)
+  & OCC scenario grid $\pm 15\%$ across 31 price points (TIMS); 15\% single-stock floor
+  & Filtered historical simulation + EWMA volatility scaling; 99\% RVaR over 5-day horizon
+  & Fixed $h_{\mathrm{IM}}$/$h_{\mathrm{MM}}$/$h_{\mathrm{ON}}$ per asset class; haircut $=$ LTV limit ($\mathrm{LTV} \leq 1-h$) \\
+\rowcolor{gray!8}
+Initial margin
+  & \EUR{7{,}500} (50\% of MV)
+  & \EUR{2{,}250} (15\% of MV)
+  & \EUR{1{,}710} (11.4\% of MV)
+  & $E_{\min} = h_{\mathrm{IM}} \times \mathrm{MV} = 30\% \times \EUR{15{,}000} = \EUR{4{,}500}$; LTV$_0 = 66.7\% \leq 70\%$ \\
+$3{\times}$ leverage possible?
+  & \textbf{No.} Requires \EUR{7{,}500} equity; max $2{\times}$ on \EUR{5{,}000}
+  & \textbf{Yes.} \EUR{5{,}000} $>$ \EUR{2{,}250}
+  & \textbf{Yes.} \EUR{5{,}000} $\gg$ \EUR{1{,}710}
+  & \textbf{Yes.} LTV$_0 = 66.7\% \leq 70\% = 1 - h_{\mathrm{IM}}$ \\
+\rowcolor{gray!8}
+IM horizon
+  & Until position is closed (50\% applies always)
+  & Until position is closed (PM grid applies always)
+  & 4 trading days, then MM regime
+  & \textbf{1 trading day}, then MM regime \\
+Maintenance / ongoing check
+  & 25\% of current MV; Excess Liquidity $\geq 0$
+  & 15\% scenario floor; Excess Liquidity $\geq 0$
+  & LTV monitored at 75\% / 80\% / 90\% thresholds (graduated)
+  & LTV $\leq 1 - h_{\mathrm{MM}} = 75\%$; single hard limit \\
+\rowcolor{gray!8}
+Overnight treatment
+  & Overnight reverts to Reg T 50\% if intraday was lower
+  & PM grid re-evaluated; same floor applies overnight
+  & EOD haircut add-on raises LTV toward breach thresholds
+  & LTV limit tightens to $1 - h_{\mathrm{MM}} - h_{\mathrm{ON}} = 70\%$ at EOD \\
+LTV monitoring principle
+  & Equity / MV $\geq 25\%$ (maintenance)
+  & NLV $-$ PM\_req $\geq 0$
+  & Graduated: monitoring 75\%, breach 80\%, liquidation 90\%
+  & \textbf{Single limit:} $\mathrm{LTV} \leq 1 - h$; no graduated warnings \\
+\rowcolor{gray!8}
+Liquidation trigger
+  & Excess Liquidity $< 0$ (binary)
+  & Excess Liquidity $< 0$ (binary)
+  & LTV $> 90\%$ (after warnings at 75\% and 80\%)
+  & LTV $> 1 - h_{\mathrm{phase}}$ (immediate, no prior warning) \\
+\rowcolor{highlight}
+Intraday liquidation price $P^{*}$
+  & $\EUR{5{,}000}/(100 \times 0.75) = \mathbf{\EUR{66.67}}$ \newline(on adjusted $2{\times}$ position)
+  & $\EUR{10{,}000}/(150 \times 0.85) = \mathbf{\EUR{78.43}}$
+  & $\EUR{10{,}000}/(150 \times 0.90 \times 0.90) = \mathbf{\EUR{82.30}}$
+  & IM phase: $\EUR{10{,}000}/(150 \times 0.70) = \mathbf{\EUR{95.24}}$ \newline MM phase: $\EUR{10{,}000}/(150 \times 0.75) = \mathbf{\EUR{88.89}}$ \\
+\rowcolor{highlight}
+Price fall to intraday liquidation
+  & $\mathbf{-33.3\%}$ (large buffer; $2{\times}$ position)
+  & $\mathbf{-21.6\%}$
+  & $\mathbf{-17.7\%}$
+  & IM phase: $\mathbf{-4.8\%}$ \quad MM phase: $\mathbf{-11.1\%}$ \\
+MTM frequency
+  & Continuous (Excess Liquidity re-checked at each mark)
+  & Continuous
+  & Continuous (LTV re-computed per price update)
+  & \textbf{Continuous} (LTV $= L / \mathrm{MV}_t$ at each price update) \\
+\rowcolor{gray!8}
+Asset-class differentiation
+  & Partial (penny stocks, leveraged ETFs get higher rates; standard = flat 50\%)
+  & Partial (single-stock 15\% vs.\ 10\% for broad indices)
+  & Full (per-ISIN vol model; $h_{\mathrm{floor}}$ table override)
+  & Full (per-class $h_{\mathrm{IM}}$, $h_{\mathrm{MM}}$, $h_{\mathrm{ON}}$ table) \\
+Model complexity
+  & None (rule-based)
+  & Low (fixed scenario grid, OCC-licensed)
+  & High (EWMA, filtered hist.\ simulation, correlation break, stress scenarios)
+  & \textbf{Low} (table lookup; one LTV computation per price tick) \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+\small
+\textbf{Notes.}
+IB~Reg~T uses the adjusted $2{\times}$ position (100~shares, \EUR{10{,}000}~MV) because $3{\times}$ cannot be opened.
+All other frameworks use 150~shares, \EUR{15{,}000}~MV, \EUR{10{,}000}~loan.
+TR~Simplified uses $h_{\mathrm{IM}} = 30\%$, $h_{\mathrm{MM}} = 25\%$, $h_{\mathrm{ON}} = 5\%$ (other equity class).
+TR~Model-Based liquidation price uses $h_{\mathrm{eff}} = 10\%$ and the 90\% LTV liquidation threshold.
+Highlighted rows show the liquidation price and price fall — the primary practical differentiators.
+
+\end{landscape}
+
+\end{document}
