@@ -1,0 +1,35 @@
+# Shared assumptions and parameters across all models
+# Update this file as decisions are made; models import from here
+
+trading:
+  aggregation_window_minutes: 15          # TBD — shorter = better UX, longer = better netting
+  min_fraction_size: 0.001                # minimum fractional unit (in shares)
+  min_order_notional_eur: 1.00            # minimum order size in EUR
+  settlement_days: 2                      # T+2
+
+risk_limits:
+  max_residual_notional_eur: 10000        # per instrument
+  max_adv_pct: 0.01                       # max % of 30d ADV per batch
+  reconciliation_tolerance_shares: 0.001  # max allowed break per instrument
+  max_fx_open_exposure_eur: 500000        # USD/GBP open FX exposure
+
+instrument_eligibility:
+  adv_minimum_eur: 1000000               # 30-day average daily volume floor
+  exchanges:
+    - XETRA
+    - EURONEXT
+    - NYSE
+    - NASDAQ
+  asset_classes:
+    - equity
+    - etf
+
+fx:
+  base_currency: EUR
+  supported_foreign: [USD, GBP]
+  hedge_policy: TBD                       # back-to-back | daily batch | none
+
+fees:
+  internal_spread_bps: TBD               # Upvest's internal cost allocation for fractional
+
+# Last updated: 2026-05-30
