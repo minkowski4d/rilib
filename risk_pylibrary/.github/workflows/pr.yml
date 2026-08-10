@@ -123,21 +123,21 @@ jobs:
      #     python3 -m coverage run
      #     python3 -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
-  ecr:
-    name: Build and publish Docker image to ECR
-    needs:
-     - test-python-slow
-     - env-setup
-    uses: ./.github/workflows/build-python.yaml
-    with:
-      ecr-repo-name: ${{ needs.env-setup.outputs.tr-ecr-repository }}
-      github-repo-name: ${{ needs.env-setup.outputs.tr-git-repository }}
-      dockerfile-name: Dockerfile
-      docker-build-args: |
-        TR_GIT_REPOSITORY=${{ github.repository }}
-        TR_GIT_COMMIT=${{ github.sha }}
-        TR_ELEMENT=${{ needs.env-setup.outputs.tr-element }}
-        TR_ATOM=${{ needs.env-setup.outputs.tr-atom }}
-        PYTHON3_ECR=${{ needs.env-setup.outputs.python3_ecr }}
-        PYTHON3_VERSION=${{ needs.env-setup.outputs.python_version }}
-        UV_VERSION=${{ needs.env-setup.outputs.uv_version }}
+  # ecr:
+  #   name: Build and publish Docker image to ECR
+  #   needs:
+  #    - test-python-slow
+  #    - env-setup
+  #   uses: ./.github/workflows/build-python.yaml
+  #   with:
+  #     ecr-repo-name: ${{ needs.env-setup.outputs.tr-ecr-repository }}
+  #     github-repo-name: ${{ needs.env-setup.outputs.tr-git-repository }}
+  #     dockerfile-name: Dockerfile
+  #     docker-build-args:
+  #       TR_GIT_REPOSITORY=${{ github.repository }}
+  #       TR_GIT_COMMIT=${{ github.sha }}
+  #       TR_ELEMENT=${{ needs.env-setup.outputs.tr-element }}
+  #       TR_ATOM=${{ needs.env-setup.outputs.tr-atom }}
+  #       PYTHON3_ECR=${{ needs.env-setup.outputs.python3_ecr }}
+  #       PYTHON3_VERSION=${{ needs.env-setup.outputs.python_version }}
+  #       UV_VERSION=${{ needs.env-setup.outputs.uv_version }}
